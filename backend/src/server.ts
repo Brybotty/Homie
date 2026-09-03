@@ -13,12 +13,26 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
+const allowedOrigins = [
+  FRONTEND_URL,
+  'http://localhost:4200',
+  'http://127.0.0.1:4200',
+];
 
 // Security and middleware
 app.use(helmet());
 app.use(
   cors({
-    origin: [FRONTEND_URL, 'http://localhost:4200', 'http://127.0.0.1:4200'],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app')
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS bloqueado para el origen: ${origin}`));
+    },
     credentials: true,
   })
 );
