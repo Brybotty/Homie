@@ -3,7 +3,8 @@ node_modules/
 package-lock.json.backup
 
 # Compilación y artefactos
-dist/
+frontend/dist/
+!backend/dist/
 dist-*/
 .angular/
 build/
