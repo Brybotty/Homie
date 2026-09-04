@@ -21,7 +21,8 @@ class AuthRepository {
        ON CONFLICT (google_id) DO UPDATE
          SET email      = EXCLUDED.email,
              full_name  = EXCLUDED.full_name,
-             avatar_url = EXCLUDED.avatar_url
+             avatar_url = EXCLUDED.avatar_url,
+             is_admin   = EXCLUDED.is_admin
        RETURNING *`, [profile.google_id, profile.email, profile.full_name, profile.avatar_url, profile.is_admin]);
         return res.rows[0];
     }
