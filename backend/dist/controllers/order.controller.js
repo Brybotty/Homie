@@ -77,7 +77,25 @@ class OrderController {
     wompiWebhook = async (req, res, next) => {
         try {
             const result = await this.service.handleWompiWebhook(req.body);
+            if (result.error) {
+                res.status(400).json({ success: false, message: result.error });
+                return;
+            }
             res.status(200).json(result);
+        }
+        catch (err) {
+            next(err);
+        }
+    };
+    syncWompi = async (req, res, next) => {
+        try {
+            const id = parseInt(req.params.id, 10);
+            const order = await this.service.syncWompiStatusByOrder(id);
+            res.json({
+                success: true,
+                data: order,
+                message: 'Estado de la orden sincronizado con Wompi',
+            });
         }
         catch (err) {
             next(err);

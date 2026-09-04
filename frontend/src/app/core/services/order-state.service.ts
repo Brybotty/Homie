@@ -69,6 +69,15 @@ export class OrderStateService {
     );
   }
 
+  syncWompi(id: number): Observable<any> {
+    return this.api.syncWompiOrder(id).pipe(
+      tap(() => {
+        this.loadOrders();
+        this.loadFinancialMetrics();
+      })
+    );
+  }
+
   setStatusFilter(status: OrderStatus | 'ALL'): void {
     this.loadOrders(status);
   }

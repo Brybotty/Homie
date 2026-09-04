@@ -41,6 +41,8 @@ router.patch('/:id/status', authMiddleware_1.requireAdmin, (0, validateDto_1.val
     (0, express_validator_1.body)('tracking_number').optional().isString().trim(),
     (0, express_validator_1.body)('delivery_notes').optional().isString(),
 ]), controller.updateStatus);
+// POST /api/orders/:id/sync-wompi — sincronizar manualmente con Wompi (solo administrador)
+router.post('/:id/sync-wompi', authMiddleware_1.requireAdmin, (0, validateDto_1.validate)([(0, express_validator_1.param)('id').isInt().withMessage('El ID debe ser un número entero')]), controller.syncWompi);
 // POST /api/orders/wompi-webhook — Webhook oficial para actualización de pagos de Wompi (público)
 router.post('/wompi-webhook', controller.wompiWebhook);
 exports.default = router;

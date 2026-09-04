@@ -72,8 +72,21 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
                     <app-status-badge [status]="order.payment_status" type="payment"></app-status-badge>
                   </div>
 
-                  <div class="flex items-center gap-2 text-xs">
+                  <div class="flex items-center gap-2 text-xs flex-wrap justify-end">
                     <span class="text-slate-400">{{ order.created_at | date:'short' }}</span>
+                    @if (order.payment_status !== 'PAGADO' && (order.payment_method === 'PSE' || order.payment_method === 'WOMPI')) {
+                      <button
+                        (click)="syncWompi(order.id)"
+                        [disabled]="syncingId() === order.id"
+                        class="px-2.5 py-1.5 bg-sky-500/10 text-sky-400 hover:bg-sky-600 hover:text-white rounded-lg font-bold transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                        title="Verificar estado de la transacción en Wompi"
+                      >
+                        <svg class="w-3.5 h-3.5" [class.animate-spin]="syncingId() === order.id" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>{{ syncingId() === order.id ? 'Consultando...' : 'Verificar Wompi' }}</span>
+                      </button>
+                    }
                     <button
                       (click)="openTrackingModal(order)"
                       class="px-3 py-1.5 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg font-bold transition-colors cursor-pointer"
@@ -293,6 +306,22 @@ export class OrderManagerComponent implements OnInit {
       },
       error: (err) => {
         alert(err.error?.error || 'Error al actualizar el estado');
+      },
+    });
+  }
+
+  syncingId = signal<number | null>(null);
+
+  syncWompi(orderId: number): void {
+    this.syncingId.set(orderId);
+    this.orderState.syncWompi(orderId).subscribe({
+      next: (res) => {
+        this.syncingId.set(null);
+        alert(res.message || 'Estado de la orden sincronizado con Wompi exitosamente');
+      },
+      error: (err) => {
+        this.syncingId.set(null);
+        alert(err.error?.message || err.error?.error || 'No se pudo consultar Wompi o no hay transacción registrada');
       },
     });
   }

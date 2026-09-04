@@ -142,4 +142,8 @@ export class ApiService {
   getFinancialSummary(): Observable<ApiResponse<OrderFinancialSummary[]>> {
     return this.http.get<ApiResponse<OrderFinancialSummary[]>>(`${this.baseUrl}/orders/financial/summary`);
   }
+
+  syncWompiOrder(id: number): Observable<ApiResponse<OrderDetail>> {
+    return this.http.post<ApiResponse<OrderDetail>>(`${this.baseUrl}/orders/${id}/sync-wompi`, {});
+  }
 }

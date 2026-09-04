@@ -66,6 +66,14 @@ router.patch(
   controller.updateStatus
 );
 
+// POST /api/orders/:id/sync-wompi — sincronizar manualmente con Wompi (solo administrador)
+router.post(
+  '/:id/sync-wompi',
+  requireAdmin,
+  validate([param('id').isInt().withMessage('El ID debe ser un número entero')]),
+  controller.syncWompi
+);
+
 // POST /api/orders/wompi-webhook — Webhook oficial para actualización de pagos de Wompi (público)
 router.post('/wompi-webhook', controller.wompiWebhook);
 
