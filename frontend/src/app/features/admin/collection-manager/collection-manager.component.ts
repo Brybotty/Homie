@@ -296,6 +296,58 @@ import { Collection, ProductWithVariants, Category } from '../../../core/models'
                 </label>
               </div>
 
+              <!-- Productos asignados directamente desde este formulario -->
+              <div class="space-y-2 pt-4 border-t border-slate-800">
+                <div class="flex items-center justify-between">
+                  <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                    🛍️ Asignar Productos a esta Colección ({{ editModalSelectedProductIds().size }} seleccionados)
+                  </label>
+                  <span class="text-[10px] text-slate-500">Opcional</span>
+                </div>
+                <p class="text-[11px] text-slate-400">
+                  Marca los productos que quieres incluir en esta temática (no afecta sus categorías principales):
+                </p>
+
+                @if (isLoadingProducts()) {
+                  <div class="py-6 text-center text-xs text-slate-400">
+                    <div class="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-1.5"></div>
+                    Cargando catálogo de productos...
+                  </div>
+                } @else if (allProducts().length === 0) {
+                  <div class="py-4 text-center text-xs text-slate-500 bg-slate-950 rounded-xl border border-slate-800">
+                    No se han cargado productos aún.
+                    <button type="button" (click)="loadCandidateProducts()" class="text-emerald-400 font-bold underline ml-1 cursor-pointer">Reintentar</button>
+                  </div>
+                } @else {
+                  <div class="max-h-52 overflow-y-auto space-y-1.5 p-2 bg-slate-950 rounded-xl border border-slate-800 divide-y divide-slate-800/40">
+                    @for (prod of allProducts(); track prod.id) {
+                      <div
+                        (click)="toggleEditModalProduct(prod.id)"
+                        class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all text-xs"
+                        [ngClass]="isEditModalProductSelected(prod.id) ? 'bg-emerald-950/40 border border-emerald-500/30 text-white' : 'hover:bg-slate-900 text-slate-300'"
+                      >
+                        <div class="flex items-center gap-2.5 min-w-0">
+                          <input
+                            type="checkbox"
+                            [checked]="isEditModalProductSelected(prod.id)"
+                            (click)="$event.stopPropagation()"
+                            (change)="toggleEditModalProduct(prod.id)"
+                            class="w-3.5 h-3.5 rounded text-emerald-600 bg-slate-900 border-slate-700 cursor-pointer"
+                          />
+                          <span class="truncate font-medium">{{ prod.name }}</span>
+                        </div>
+                        <span
+                          class="px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ml-2"
+                          [ngClass]="isEditModalProductSelected(prod.id) ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-500'"
+                        >
+                          {{ isEditModalProductSelected(prod.id) ? '✓ En Colección' : '+ Añadir' }}
+                        </span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
               <!-- Botones del Formulario -->
               <div class="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
                 <button
@@ -349,7 +401,8 @@ import { Collection, ProductWithVariants, Category } from '../../../core/models'
               <div class="relative flex-1 w-full">
                 <input
                   type="text"
-                  [(ngModel)]="productFilterQuery"
+                  [ngModel]="productFilterQuery()"
+                  (ngModelChange)="productFilterQuery.set($event)"
                   placeholder="Buscar productos por nombre, SKU..."
                   class="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                 />
@@ -360,7 +413,8 @@ import { Collection, ProductWithVariants, Category } from '../../../core/models'
 
               <!-- Filtro de Categoría -->
               <select
-                [(ngModel)]="productFilterCategory"
+                [ngModel]="productFilterCategory()"
+                (ngModelChange)="productFilterCategory.set($event)"
                 class="w-full sm:w-48 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               >
                 <option value="ALL">Todas las Categorías</option>
@@ -390,54 +444,68 @@ import { Collection, ProductWithVariants, Category } from '../../../core/models'
 
             <!-- Lista de Productos con Checkboxes -->
             <div class="flex-1 overflow-y-auto p-4 space-y-2 divide-y divide-slate-800/60">
-              @for (prod of filteredCandidateProducts(); track prod.id) {
-                @let isSelected = selectedProductIds().has(prod.id);
-                <div
-                  (click)="toggleProductSelection(prod.id)"
-                  class="pt-2 first:pt-0 flex items-center justify-between p-3 rounded-2xl cursor-pointer transition-colors"
-                  [ngClass]="isSelected ? 'bg-emerald-950/30 border border-emerald-800/40' : 'hover:bg-slate-800/40'"
-                >
-                  <div class="flex items-center gap-3 min-w-0">
-                    <!-- Checkbox -->
-                    <input
-                      type="checkbox"
-                      [checked]="isSelected"
-                      (click)="$event.stopPropagation(); toggleProductSelection(prod.id)"
-                      class="w-4 h-4 rounded text-emerald-600 bg-slate-950 border-slate-700 focus:ring-emerald-500 cursor-pointer"
-                    />
+              @if (isLoadingProducts()) {
+                <div class="py-12 text-center text-sm text-slate-400">
+                  <div class="w-7 h-7 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  Cargando catálogo de productos...
+                </div>
+              } @else if (filteredCandidateProducts().length === 0) {
+                <div class="py-12 text-center text-sm text-slate-500">
+                  <p class="font-bold text-slate-400">No se encontraron productos</p>
+                  <p class="text-xs mt-1">Prueba cambiando los términos de búsqueda o el filtro de categoría.</p>
+                </div>
+              } @else {
+                @for (prod of filteredCandidateProducts(); track prod.id) {
+                  <div
+                    (click)="toggleProductSelection(prod.id)"
+                    class="pt-2 first:pt-0 flex items-center justify-between p-3 rounded-2xl cursor-pointer transition-colors"
+                    [ngClass]="isProductSelected(prod.id) ? 'bg-emerald-950/30 border border-emerald-800/40' : 'hover:bg-slate-800/40'"
+                  >
+                    <div class="flex items-center gap-3 min-w-0">
+                      <!-- Checkbox -->
+                      <input
+                        type="checkbox"
+                        [checked]="isProductSelected(prod.id)"
+                        (click)="$event.stopPropagation()"
+                        (change)="toggleProductSelection(prod.id)"
+                        class="w-4 h-4 rounded text-emerald-600 bg-slate-950 border-slate-700 focus:ring-emerald-500 cursor-pointer"
+                      />
 
-                    <!-- Imagen -->
-                    <img
-                      [src]="prod.featured_image_url || (prod.variants && prod.variants[0]?.image_url) || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?q=80&w=600&auto=format&fit=crop'"
-                      [alt]="prod.name"
-                      class="w-10 h-10 rounded-xl object-cover bg-slate-800 border border-slate-700 shrink-0"
-                    />
+                      <!-- Imagen -->
+                      <img
+                        [src]="prod.featured_image_url || (prod.variants && prod.variants.length > 0 ? prod.variants[0].image_url : null) || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?q=80&w=600&auto=format&fit=crop'"
+                        [alt]="prod.name"
+                        class="w-10 h-10 rounded-xl object-cover bg-slate-800 border border-slate-700 shrink-0"
+                      />
 
-                    <!-- Info -->
-                    <div class="min-w-0">
-                      <p class="text-xs font-bold text-white truncate">{{ prod.name }}</p>
-                      <div class="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
-                        <span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 text-[10px]">
-                          {{ prod.category_name || prod.parent_category_name || 'Sin Categoría' }}
-                        </span>
-                        <span>•</span>
-                        <span class="font-mono text-emerald-400 font-semibold">
-                          {{ (prod.variants && prod.variants[0]?.sku) || prod.slug }}
-                        </span>
+                      <!-- Info -->
+                      <div class="min-w-0">
+                        <p class="text-xs font-bold text-white truncate">{{ prod.name }}</p>
+                        <div class="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
+                          <span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 text-[10px]">
+                            {{ prod.category_name || prod.parent_category_name || 'Sin Categoría' }}
+                          </span>
+                          <span>•</span>
+                          <span class="font-mono text-emerald-400 font-semibold">
+                            {{ (prod.variants && prod.variants.length > 0 ? prod.variants[0].sku : null) || prod.slug }}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <!-- Estado en la Colección -->
-                  <div class="shrink-0 pl-2">
-                    <span
-                      class="px-2.5 py-1 rounded-full text-[10px] font-bold"
-                      [ngClass]="isSelected ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800/80 text-slate-400'"
-                    >
-                      {{ isSelected ? '✓ En Colección' : '+ Añadir' }}
-                    </span>
+                    <!-- Estado en la Colección -->
+                    <div class="shrink-0 pl-2">
+                      <button
+                        type="button"
+                        (click)="$event.stopPropagation(); toggleProductSelection(prod.id)"
+                        class="px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition-all"
+                        [ngClass]="isProductSelected(prod.id) ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800/80 text-slate-400 hover:text-white'"
+                      >
+                        {{ isProductSelected(prod.id) ? '✓ En Colección' : '+ Añadir' }}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                }
               }
             </div>
 
@@ -480,29 +548,31 @@ export class CollectionManagerComponent implements OnInit {
   allProducts = signal<ProductWithVariants[]>([]);
   categories = signal<Category[]>([]);
   isLoading = signal<boolean>(false);
+  isLoadingProducts = signal<boolean>(false);
   isSaving = signal<boolean>(false);
   toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // Modal Crear/Editar
+  // Modal Crear/Editar Colección
   isEditModalOpen = signal<boolean>(false);
   isEditing = signal<boolean>(false);
   editingCollection = signal<Collection | null>(null);
   collectionForm!: FormGroup;
+  editModalSelectedProductIds = signal<Set<number>>(new Set());
 
   // Modal Asignar Productos
   isProductsModalOpen = signal<boolean>(false);
   selectedCollection = signal<Collection | null>(null);
   selectedProductIds = signal<Set<number>>(new Set());
 
-  // Filtros en modal de productos
-  productFilterQuery = '';
-  productFilterCategory = 'ALL';
+  // Filtros en modal de productos (reactivos con Signals)
+  productFilterQuery = signal<string>('');
+  productFilterCategory = signal<string>('ALL');
 
   // Productos candidatos filtrados
   filteredCandidateProducts = computed(() => {
     let list = this.allProducts();
-    const q = this.productFilterQuery.toLowerCase().trim();
-    const cat = this.productFilterCategory;
+    const q = this.productFilterQuery().toLowerCase().trim();
+    const cat = this.productFilterCategory();
 
     if (cat !== 'ALL') {
       const catId = parseInt(cat, 10);
@@ -514,7 +584,7 @@ export class CollectionManagerComponent implements OnInit {
         (p) =>
           p.name.toLowerCase().includes(q) ||
           p.slug.toLowerCase().includes(q) ||
-          p.variants.some((v) => v.sku.toLowerCase().includes(q))
+          (p.variants && p.variants.some((v) => v.sku && v.sku.toLowerCase().includes(q)))
       );
     }
 
@@ -551,17 +621,7 @@ export class CollectionManagerComponent implements OnInit {
       error: () => this.isLoading.set(false),
     });
 
-    // Cargar productos para asignación (hasta 500 productos)
-    this.api.getProducts({ limit: 500 }).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.allProducts.set(res.data);
-        }
-      },
-      error: (err) => {
-        console.error('Error cargando productos para colecciones:', err);
-      },
-    });
+    this.loadCandidateProducts();
 
     // Cargar categorías para filtros
     this.api.getCategories(false).subscribe({
@@ -569,6 +629,22 @@ export class CollectionManagerComponent implements OnInit {
         if (res.success) {
           this.categories.set(res.data);
         }
+      },
+    });
+  }
+
+  loadCandidateProducts(): void {
+    this.isLoadingProducts.set(true);
+    this.api.getProducts({ limit: 500 }).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.allProducts.set(res.data);
+        }
+        this.isLoadingProducts.set(false);
+      },
+      error: (err) => {
+        console.error('Error cargando productos para colecciones:', err);
+        this.isLoadingProducts.set(false);
       },
     });
   }
@@ -598,9 +674,25 @@ export class CollectionManagerComponent implements OnInit {
   }
 
   // ─── MODAL CREAR / EDITAR ──────────────────────────────────────────
+  isEditModalProductSelected(productId: number): boolean {
+    return this.editModalSelectedProductIds().has(Number(productId));
+  }
+
+  toggleEditModalProduct(productId: number): void {
+    const id = Number(productId);
+    const updated = new Set(this.editModalSelectedProductIds());
+    if (updated.has(id)) {
+      updated.delete(id);
+    } else {
+      updated.add(id);
+    }
+    this.editModalSelectedProductIds.set(updated);
+  }
+
   openCreateModal(): void {
     this.isEditing.set(false);
     this.editingCollection.set(null);
+    this.editModalSelectedProductIds.set(new Set());
     this.collectionForm.reset({
       name: '',
       slug: '',
@@ -610,12 +702,17 @@ export class CollectionManagerComponent implements OnInit {
       display_order: (this.collections().length + 1) * 10,
       is_active: true,
     });
+    if (this.allProducts().length === 0) {
+      this.loadCandidateProducts();
+    }
     this.isEditModalOpen.set(true);
   }
 
   openEditModal(coll: Collection): void {
     this.isEditing.set(true);
     this.editingCollection.set(coll);
+    const ids = (coll.product_ids || []).map((id) => Number(id));
+    this.editModalSelectedProductIds.set(new Set<number>(ids));
     this.collectionForm.patchValue({
       name: coll.name,
       slug: coll.slug,
@@ -625,6 +722,9 @@ export class CollectionManagerComponent implements OnInit {
       display_order: coll.display_order ?? 0,
       is_active: coll.is_active,
     });
+    if (this.allProducts().length === 0) {
+      this.loadCandidateProducts();
+    }
     this.isEditModalOpen.set(true);
   }
 
@@ -636,7 +736,10 @@ export class CollectionManagerComponent implements OnInit {
     if (this.collectionForm.invalid) return;
 
     this.isSaving.set(true);
-    const formVal = this.collectionForm.value;
+    const formVal = {
+      ...this.collectionForm.value,
+      product_ids: Array.from(this.editModalSelectedProductIds()).map((id) => Number(id)),
+    };
 
     if (this.isEditing() && this.editingCollection()) {
       this.api.updateCollection(this.editingCollection()!.id, formVal).subscribe({
@@ -688,12 +791,19 @@ export class CollectionManagerComponent implements OnInit {
   }
 
   // ─── MODAL ASIGNAR PRODUCTOS ───────────────────────────────────────
+  isProductSelected(productId: number): boolean {
+    return this.selectedProductIds().has(Number(productId));
+  }
+
   openProductsModal(coll: Collection): void {
     this.selectedCollection.set(coll);
-    const currentIds = new Set<number>(coll.product_ids || []);
-    this.selectedProductIds.set(currentIds);
-    this.productFilterQuery = '';
-    this.productFilterCategory = 'ALL';
+    const ids = (coll.product_ids || []).map((id) => Number(id));
+    this.selectedProductIds.set(new Set<number>(ids));
+    this.productFilterQuery.set('');
+    this.productFilterCategory.set('ALL');
+    if (this.allProducts().length === 0) {
+      this.loadCandidateProducts();
+    }
     this.isProductsModalOpen.set(true);
   }
 
@@ -703,11 +813,12 @@ export class CollectionManagerComponent implements OnInit {
   }
 
   toggleProductSelection(productId: number): void {
+    const id = Number(productId);
     const updated = new Set(this.selectedProductIds());
-    if (updated.has(productId)) {
-      updated.delete(productId);
+    if (updated.has(id)) {
+      updated.delete(id);
     } else {
-      updated.add(productId);
+      updated.add(id);
     }
     this.selectedProductIds.set(updated);
   }
@@ -715,7 +826,7 @@ export class CollectionManagerComponent implements OnInit {
   selectAllFilteredProducts(): void {
     const updated = new Set(this.selectedProductIds());
     for (const p of this.filteredCandidateProducts()) {
-      updated.add(p.id);
+      updated.add(Number(p.id));
     }
     this.selectedProductIds.set(updated);
   }
@@ -728,8 +839,8 @@ export class CollectionManagerComponent implements OnInit {
     if (!this.selectedCollection()) return;
 
     this.isSaving.set(true);
-    const collectionId = this.selectedCollection()!.id;
-    const productIds = Array.from(this.selectedProductIds());
+    const collectionId = Number(this.selectedCollection()!.id);
+    const productIds = Array.from(this.selectedProductIds()).map((id) => Number(id));
 
     this.api.setCollectionProducts(collectionId, productIds).subscribe({
       next: (res) => {
@@ -748,6 +859,7 @@ export class CollectionManagerComponent implements OnInit {
         this.isSaving.set(false);
       },
       error: (err) => {
+        console.error('Error al guardar productos de la colección:', err);
         this.showToast(err.error?.error || 'Error al guardar los productos de la colección.', 'error');
         this.isSaving.set(false);
       },
