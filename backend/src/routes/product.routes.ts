@@ -12,7 +12,7 @@ router.get(
     query('category').optional().isString().trim(),
     query('active').optional().isBoolean(),
     query('page').optional().isInt({ min: 1 }),
-    query('limit').optional().isInt({ min: 1, max: 100 }),
+    query('limit').optional().isInt({ min: 1, max: 1000 }),
   ]),
   controller.getAll
 );
@@ -33,6 +33,8 @@ router.post(
     body('short_description').optional({ nullable: true }).isString().isLength({ max: 300 }),
     body('featured_image_url').optional({ nullable: true }).isString(),
     body('is_active').optional().isBoolean(),
+    body('collection_ids').optional().isArray(),
+    body('collection_ids.*').isInt(),
     body('variants').isArray({ min: 1 }).withMessage('Debe incluir al menos una variante'),
     body('variants.*.id').optional({ nullable: true }).isInt(),
     body('variants.*.sku').trim().notEmpty().withMessage('El SKU de la variante es requerido'),
@@ -68,6 +70,8 @@ router.put(
     body('short_description').optional({ nullable: true }).isString().isLength({ max: 300 }),
     body('featured_image_url').optional({ nullable: true }).isString(),
     body('is_active').optional().isBoolean(),
+    body('collection_ids').optional().isArray(),
+    body('collection_ids.*').isInt(),
     body('variants').optional().isArray(),
     body('variants.*.id').optional({ nullable: true }).isInt(),
     body('variants.*.sku').optional().trim().notEmpty(),

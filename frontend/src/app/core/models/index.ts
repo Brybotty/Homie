@@ -188,6 +188,7 @@ export interface CreateProductDto {
   short_description?: string;
   featured_image_url?: string;
   is_active?: boolean;
+  collection_ids?: number[];
   variants: CreateVariantDto[];
 }
 
@@ -199,6 +200,7 @@ export interface UpdateProductDto {
   short_description?: string | null;
   featured_image_url?: string | null;
   is_active?: boolean;
+  collection_ids?: number[];
   variants?: UpdateVariantDto[];
 }
 

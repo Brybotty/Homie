@@ -236,6 +236,11 @@ class ProductRepository {
                 const variantResult = await client.query(insertVariantQuery, variantValues);
                 insertedVariants.push(variantResult.rows[0]);
             }
+            if (dto.collection_ids && Array.isArray(dto.collection_ids) && dto.collection_ids.length > 0) {
+                for (const colId of dto.collection_ids) {
+                    await client.query('INSERT INTO product_collections (product_id, collection_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [product.id, colId]);
+                }
+            }
             await client.query('COMMIT');
             return {
                 ...product,
@@ -397,6 +402,12 @@ class ProductRepository {
                             v.is_active !== undefined ? v.is_active : true,
                         ]);
                     }
+                }
+            }
+            if (dto.collection_ids !== undefined && Array.isArray(dto.collection_ids)) {
+                await client.query('DELETE FROM product_collections WHERE product_id = $1', [id]);
+                for (const colId of dto.collection_ids) {
+                    await client.query('INSERT INTO product_collections (product_id, collection_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [id, colId]);
                 }
             }
             await client.query('COMMIT');

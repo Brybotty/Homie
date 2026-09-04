@@ -19,7 +19,7 @@ class CollectionRepository {
         COUNT(DISTINCT pc.product_id)::int as product_count,
         COALESCE(
           array_agg(pc.product_id) FILTER (WHERE pc.product_id IS NOT NULL),
-          '{}'
+          ARRAY[]::int[]
         ) as product_ids
       FROM collections c
       LEFT JOIN product_collections pc ON c.id = pc.collection_id
@@ -37,7 +37,7 @@ class CollectionRepository {
         COUNT(DISTINCT pc.product_id)::int as product_count,
         COALESCE(
           array_agg(pc.product_id) FILTER (WHERE pc.product_id IS NOT NULL),
-          '{}'
+          ARRAY[]::int[]
         ) as product_ids
       FROM collections c
       LEFT JOIN product_collections pc ON c.id = pc.collection_id
@@ -54,7 +54,7 @@ class CollectionRepository {
         COUNT(DISTINCT pc.product_id)::int as product_count,
         COALESCE(
           array_agg(pc.product_id) FILTER (WHERE pc.product_id IS NOT NULL),
-          '{}'
+          ARRAY[]::int[]
         ) as product_ids
       FROM collections c
       LEFT JOIN product_collections pc ON c.id = pc.collection_id

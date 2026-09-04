@@ -123,7 +123,7 @@ import { CopCurrencyPipe } from '../../pipes/cop-currency.pipe';
               </div>
               <div class="flex justify-between text-sm text-slate-500 font-medium">
                 <span>Envío</span>
-                <span class="text-emerald-600 font-semibold">Calculado en checkout</span>
+                <span class="text-emerald-600 font-bold text-xs">Desde $8.000 (Cali) / $12.000 Nal.</span>
               </div>
               <div class="flex justify-between text-base font-extrabold text-slate-900 pt-2 border-t border-slate-100">
                 <span>Total Estimado</span>

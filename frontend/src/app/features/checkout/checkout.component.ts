@@ -345,6 +345,70 @@ import { environment } from '../../../environments/environment';
                   </div>
                 </div>
 
+                <!-- Tarifa Preferencial Local Cali Selector -->
+                @if (isCali) {
+                  <div class="p-4 rounded-2xl bg-emerald-50/90 border border-emerald-300 space-y-2.5 animate-fade-in shadow-sm">
+                    <div class="flex items-center gap-2 text-xs font-black text-emerald-950">
+                      <span class="text-base">📍</span>
+                      <span>¡Tarifa local preferencial para Cali!</span>
+                    </div>
+                    <p class="text-[11px] text-emerald-800">
+                      Despachamos directamente desde nuestra sede en Cali. Selecciona tu zona de entrega:
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                      <label
+                        class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all text-xs"
+                        [ngClass]="checkoutForm.get('cali_zone')?.value === 'urbana' ? 'bg-white border-emerald-500 shadow-sm ring-1 ring-emerald-500/30 font-bold text-emerald-950' : 'bg-emerald-50/40 border-emerald-200/70 text-emerald-800 hover:bg-white/60'"
+                      >
+                        <input
+                          type="radio"
+                          formControlName="cali_zone"
+                          value="urbana"
+                          class="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <span class="font-bold">Cali Urbana</span>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black border border-emerald-200">$8.000</span>
+                          </div>
+                          <p class="text-[11px] text-slate-500 font-normal mt-0.5">
+                            Norte, Sur, Centro, Oeste, San Antonio, Tequendama, etc.
+                          </p>
+                        </div>
+                      </label>
+
+                      <label
+                        class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all text-xs"
+                        [ngClass]="checkoutForm.get('cali_zone')?.value === 'periferica' ? 'bg-white border-emerald-500 shadow-sm ring-1 ring-emerald-500/30 font-bold text-emerald-950' : 'bg-emerald-50/40 border-emerald-200/70 text-emerald-800 hover:bg-white/60'"
+                      >
+                        <input
+                          type="radio"
+                          formControlName="cali_zone"
+                          value="periferica"
+                          class="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <span class="font-bold">Cali Periférica / Alrededores</span>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black border border-emerald-200">$10.000</span>
+                          </div>
+                          <p class="text-[11px] text-slate-500 font-normal mt-0.5">
+                            Pance, Jamundí, Yumbo, Km Vía al Mar, Corregimientos.
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                } @else if (checkoutForm.get('city')?.value) {
+                  <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs text-slate-600">
+                    <div class="flex items-center gap-2">
+                      <span>🚚</span>
+                      <span>Envío Nacional asegurado a <strong>{{ checkoutForm.get('city')?.value }}</strong>:</span>
+                    </div>
+                    <span class="font-black text-slate-800">$12.000 COP</span>
+                  </div>
+                }
+
                 <!-- Método de Pago -->
                 <div class="space-y-3 pt-4 border-t border-slate-100">
                   <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
@@ -527,8 +591,19 @@ import { environment } from '../../../environments/environment';
                   <span>Subtotal</span>
                   <span class="font-semibold text-slate-800">{{ cart.total() | copCurrency }}</span>
                 </div>
-                <div class="flex justify-between text-slate-500">
-                  <span>Costo de Envío</span>
+                <div class="flex justify-between text-slate-500 items-center">
+                  <div>
+                    <span>Costo de Envío</span>
+                    @if (isCali) {
+                      <span class="block text-[10px] font-bold text-emerald-600">
+                        📍 Tarifa Local Cali ({{ checkoutForm.get('cali_zone')?.value === 'periferica' ? 'Periférica' : 'Urbana' }})
+                      </span>
+                    } @else {
+                      <span class="block text-[10px] font-medium text-slate-400">
+                        🚚 Envío Nacional
+                      </span>
+                    }
+                  </div>
                   <span class="font-semibold text-emerald-600">{{ shippingCost | copCurrency }}</span>
                 </div>
                 <div class="flex justify-between text-base font-extrabold text-slate-900 pt-3 border-t border-slate-100">
@@ -554,7 +629,18 @@ export class CheckoutComponent implements OnInit {
   errorMessage = signal<string | null>(null);
   completedOrder = signal<OrderDetail | null>(null);
 
-  readonly shippingCost = 12000;
+  get isCali(): boolean {
+    const city = this.checkoutForm?.get('city')?.value || '';
+    return city.trim().toLowerCase() === 'cali';
+  }
+
+  get shippingCost(): number {
+    if (this.isCali) {
+      const zone = this.checkoutForm?.get('cali_zone')?.value || 'urbana';
+      return zone === 'periferica' ? 10000 : 8000;
+    }
+    return 12000;
+  }
 
   get grandTotal(): number {
     return this.cart.total() + this.shippingCost;
@@ -633,6 +719,7 @@ export class CheckoutComponent implements OnInit {
       neighborhood: [''],
       department: ['Bogotá D.C.', Validators.required],
       city: ['Bogotá D.C.', Validators.required],
+      cali_zone: ['urbana'],
       payment_method: ['CONTRAENTREGA', Validators.required],
       delivery_notes: [''],
     });
@@ -651,6 +738,11 @@ export class CheckoutComponent implements OnInit {
     }
 
     const formVal = this.checkoutForm.value;
+    let notes = formVal.delivery_notes?.trim() || '';
+    if (this.isCali) {
+      const zoneLabel = formVal.cali_zone === 'periferica' ? 'Periférica/Alrededores ($10.000)' : 'Urbana ($8.000)';
+      notes = notes ? `[Zona Cali: ${zoneLabel}] ${notes}` : `[Zona Cali: ${zoneLabel}]`;
+    }
 
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
@@ -673,7 +765,7 @@ export class CheckoutComponent implements OnInit {
       shipping_cost: this.shippingCost,
       discount_amount: 0,
       payment_method: formVal.payment_method as PaymentMethod,
-      delivery_notes: formVal.delivery_notes || undefined,
+      delivery_notes: notes || undefined,
     };
 
     this.api.createOrder(dto).subscribe({

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
-import { ProductWithVariants, Category, ProductVariant, CreateProductDto, UpdateProductDto } from '../../../core/models';
+import { ProductWithVariants, Category, Collection, ProductVariant, CreateProductDto, UpdateProductDto } from '../../../core/models';
 import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
 
 @Component({
@@ -184,25 +184,40 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
                 <!-- Product Header Row -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div class="flex items-start gap-3 sm:gap-4">
-                    <!-- Control Arrastrar & Soltar (Drag Handle + Orden) -->
+                    <!-- Control Arrastrar & Soltar + Número de Orden Editable -->
                     <div
-                      class="flex flex-col items-center justify-center gap-1 shrink-0 cursor-grab active:cursor-grabbing p-1.5 rounded-xl bg-slate-950/90 border border-slate-800 hover:border-emerald-500/60 hover:bg-slate-800/80 transition-all select-none"
-                      title="Arrastra para cambiar el orden en que se muestra este producto en la tienda"
-                      draggable="true"
-                      (dragstart)="onDragStart($event, idx)"
+                      class="flex flex-col items-center justify-center gap-1 shrink-0 p-1.5 rounded-xl bg-slate-950/90 border border-slate-800 hover:border-emerald-500/60 hover:bg-slate-800/80 transition-all select-none"
+                      title="Escribe un número para mover la posición directamente, o arrastra con las flechas"
                     >
-                      <span class="text-[10px] font-mono font-black text-emerald-400 bg-slate-900 px-1 py-0.2 rounded border border-slate-800">
-                        #{{ idx + 1 }}
-                      </span>
-                      <svg class="w-4 h-4 text-slate-400 hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8h16M4 16h16" />
-                      </svg>
+                      <div class="flex items-center gap-0.5" title="Escribe el número de posición y presiona Enter">
+                        <span class="text-[9px] font-bold text-slate-500">#</span>
+                        <input
+                          type="number"
+                          [value]="idx + 1"
+                          min="1"
+                          [max]="products().length"
+                          (click)="$event.stopPropagation()"
+                          (change)="onOrderInputChange(product, idx, $event)"
+                          (keydown.enter)="onOrderInputEnter($event)"
+                          class="w-11 text-center py-0.5 px-0.5 bg-slate-900 border border-slate-700 hover:border-emerald-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded text-[11px] font-mono font-black text-emerald-400 focus:outline-none transition-all cursor-text"
+                        />
+                      </div>
+                      <div
+                        class="cursor-grab active:cursor-grabbing text-slate-500 hover:text-white"
+                        draggable="true"
+                        (dragstart)="onDragStart($event, idx)"
+                        title="Arrastra para cambiar el orden"
+                      >
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8h16M4 16h16" />
+                        </svg>
+                      </div>
                       
                       <!-- Mini flechas subir/bajar para accesibilidad y dispositivos móviles -->
                       <div class="flex flex-col gap-0.5">
                         <button
                           type="button"
-                          (click)="$event.stopPropagation(); moveProduct(idx, -1)"
+                          (click)="$event.stopPropagation(); moveProduct(product, -1)"
                           [disabled]="idx === 0"
                           class="px-1 py-0.2 rounded hover:bg-slate-700 text-[9px] text-slate-400 hover:text-white disabled:opacity-20 cursor-pointer"
                           title="Mover una posición arriba"
@@ -211,7 +226,7 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
                         </button>
                         <button
                           type="button"
-                          (click)="$event.stopPropagation(); moveProduct(idx, 1)"
+                          (click)="$event.stopPropagation(); moveProduct(product, 1)"
                           [disabled]="idx === filteredProducts().length - 1"
                           class="px-1 py-0.2 rounded hover:bg-slate-700 text-[9px] text-slate-400 hover:text-white disabled:opacity-20 cursor-pointer"
                           title="Mover una posición abajo"
@@ -244,6 +259,19 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
                           <span class="px-2 py-0.5 rounded-md bg-emerald-950/60 border border-emerald-800 text-emerald-400 text-[10px] font-bold">
                             {{ product.category_name }}
                           </span>
+                        }
+
+                        <!-- Colecciones Asignadas Badges -->
+                        @if (product.collection_ids && product.collection_ids.length > 0) {
+                          @for (colId of product.collection_ids; track colId) {
+                            @let col = getCollectionById(colId);
+                            @if (col) {
+                              <span class="px-2 py-0.5 rounded-md bg-purple-950/60 border border-purple-800 text-purple-300 text-[10px] font-bold flex items-center gap-1">
+                                <span>🛍️</span>
+                                <span>{{ col.name }}</span>
+                              </span>
+                            }
+                          }
                         }
 
                         <span
@@ -521,6 +549,35 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
                     <label for="is_active" class="text-xs font-semibold text-slate-200 cursor-pointer">
                       Producto activo y visible para los clientes en la tienda online
                     </label>
+                  </div>
+
+                  <!-- Colecciones Temáticas Asignadas -->
+                  <div class="space-y-2 pt-4 border-t border-slate-800">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                      Colecciones Temáticas (Círculos & Stories de la tienda)
+                    </label>
+                    <p class="text-[11px] text-slate-400">
+                      Selecciona en cuáles colecciones quieres incluir este producto (puedes marcar varias sin alterar su categoría principal):
+                    </p>
+                    <div class="flex flex-wrap gap-2 pt-1">
+                      @for (coll of collections(); track coll.id) {
+                        @let selected = isCollectionSelected(coll.id);
+                        <button
+                          type="button"
+                          (click)="toggleProductCollection(coll.id)"
+                          class="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border"
+                          [ngClass]="selected
+                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/20'
+                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white'"
+                        >
+                          <span>{{ selected ? '✓' : '+' }}</span>
+                          <span>{{ coll.name }}</span>
+                        </button>
+                      }
+                      @if (collections().length === 0) {
+                        <span class="text-xs text-slate-500 italic">No hay colecciones creadas aún.</span>
+                      }
+                    </div>
                   </div>
                 </div>
               }
@@ -965,6 +1022,7 @@ export class ProductManagerComponent implements OnInit {
   // Data signals
   products = signal<ProductWithVariants[]>([]);
   categories = signal<Category[]>([]);
+  collections = signal<Collection[]>([]);
   isLoading = signal<boolean>(false);
   isSaving = signal<boolean>(false);
   toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -1087,12 +1145,30 @@ export class ProductManagerComponent implements OnInit {
       name: ['', Validators.required],
       slug: ['', Validators.required],
       category_id: [null],
+      collection_ids: [[]],
       description: [''],
       short_description: [''],
       featured_image_url: [''],
       is_active: [true],
       variants: this.fb.array([]),
     });
+  }
+
+  getCollectionById(id: number): Collection | undefined {
+    return this.collections().find((c) => c.id === id);
+  }
+
+  toggleProductCollection(collId: number): void {
+    const current: number[] = this.productForm.get('collection_ids')?.value || [];
+    const exists = current.includes(collId);
+    const updated = exists ? current.filter((id) => id !== collId) : [...current, collId];
+    this.productForm.patchValue({ collection_ids: updated });
+    this.productForm.markAsDirty();
+  }
+
+  isCollectionSelected(collId: number): boolean {
+    const current: number[] = this.productForm.get('collection_ids')?.value || [];
+    return current.includes(collId);
   }
 
   createVariantGroup(v?: Partial<ProductVariant>): FormGroup {
@@ -1173,6 +1249,12 @@ export class ProductManagerComponent implements OnInit {
       },
     });
 
+    this.api.getAllCollectionsAdmin().subscribe({
+      next: (res) => {
+        if (res.success) this.collections.set(res.data);
+      },
+    });
+
     this.api.getProducts({ limit: 100 }).subscribe({
       next: (res) => {
         if (res.success) {
@@ -1231,11 +1313,38 @@ export class ProductManagerComponent implements OnInit {
     this.dragOverIndex.set(null);
   }
 
-  moveProduct(currentIndex: number, direction: -1 | 1): void {
-    const targetIndex = currentIndex + direction;
-    const currentList = this.filteredProducts();
-    if (targetIndex < 0 || targetIndex >= currentList.length) return;
-    this.reorderArray(currentIndex, targetIndex);
+  onOrderInputChange(product: ProductWithVariants, currentFilteredIdx: number, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const rawVal = parseInt(input.value, 10);
+    if (isNaN(rawVal)) {
+      input.value = (currentFilteredIdx + 1).toString();
+      return;
+    }
+    const totalCount = this.products().length;
+    const targetPos = Math.max(1, Math.min(totalCount, rawVal));
+    const targetIndex = targetPos - 1;
+
+    const sourceIndex = this.products().findIndex((p) => p.id === product.id);
+    if (sourceIndex === -1) return;
+
+    if (sourceIndex !== targetIndex) {
+      this.reorderArray(sourceIndex, targetIndex);
+      this.showToast(`¡"${product.name}" movido al orden #${targetPos} y guardado!`, 'success');
+    } else {
+      input.value = (currentFilteredIdx + 1).toString();
+    }
+  }
+
+  onOrderInputEnter(event: Event): void {
+    (event.target as HTMLInputElement).blur();
+  }
+
+  moveProduct(product: ProductWithVariants, direction: -1 | 1): void {
+    const sourceIndex = this.products().findIndex((p) => p.id === product.id);
+    if (sourceIndex === -1) return;
+    const targetIndex = sourceIndex + direction;
+    if (targetIndex < 0 || targetIndex >= this.products().length) return;
+    this.reorderArray(sourceIndex, targetIndex);
   }
 
   private reorderArray(fromIndex: number, toIndex: number): void {
@@ -1297,6 +1406,7 @@ export class ProductManagerComponent implements OnInit {
       name: [product.name, Validators.required],
       slug: [product.slug, Validators.required],
       category_id: [product.category_id],
+      collection_ids: [product.collection_ids ? [...product.collection_ids] : []],
       description: [product.description || ''],
       short_description: [product.short_description || ''],
       featured_image_url: [product.featured_image_url || ''],
@@ -1385,6 +1495,7 @@ export class ProductManagerComponent implements OnInit {
         name: formVal.name?.trim(),
         slug: formVal.slug?.trim(),
         category_id: formVal.category_id || null,
+        collection_ids: formVal.collection_ids || [],
         description: formVal.description || '',
         short_description: formVal.short_description || '',
         featured_image_url: formVal.featured_image_url || '',
@@ -1412,6 +1523,7 @@ export class ProductManagerComponent implements OnInit {
         name: formVal.name?.trim(),
         slug: formVal.slug?.trim(),
         category_id: formVal.category_id || null,
+        collection_ids: formVal.collection_ids || [],
         description: formVal.description || '',
         short_description: formVal.short_description || '',
         featured_image_url: formVal.featured_image_url || '',

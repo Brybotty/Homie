@@ -408,7 +408,7 @@ import { Collection, ProductWithVariants, Category } from '../../../core/models'
 
                     <!-- Imagen -->
                     <img
-                      [src]="prod.featured_image_url || prod.variants[0].image_url || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?q=80&w=600&auto=format&fit=crop'"
+                      [src]="prod.featured_image_url || (prod.variants && prod.variants[0]?.image_url) || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?q=80&w=600&auto=format&fit=crop'"
                       [alt]="prod.name"
                       class="w-10 h-10 rounded-xl object-cover bg-slate-800 border border-slate-700 shrink-0"
                     />
@@ -422,7 +422,7 @@ import { Collection, ProductWithVariants, Category } from '../../../core/models'
                         </span>
                         <span>•</span>
                         <span class="font-mono text-emerald-400 font-semibold">
-                          {{ prod.variants[0].sku || prod.slug }}
+                          {{ (prod.variants && prod.variants[0]?.sku) || prod.slug }}
                         </span>
                       </div>
                     </div>
@@ -551,12 +551,15 @@ export class CollectionManagerComponent implements OnInit {
       error: () => this.isLoading.set(false),
     });
 
-    // Cargar productos para asignación
-    this.api.getProducts({ limit: 200 }).subscribe({
+    // Cargar productos para asignación (hasta 500 productos)
+    this.api.getProducts({ limit: 500 }).subscribe({
       next: (res) => {
         if (res.success) {
           this.allProducts.set(res.data);
         }
+      },
+      error: (err) => {
+        console.error('Error cargando productos para colecciones:', err);
       },
     });
 
@@ -732,6 +735,13 @@ export class CollectionManagerComponent implements OnInit {
       next: (res) => {
         if (res.success) {
           this.showToast('¡Productos de la colección actualizados exitosamente!', 'success');
+          this.collections.update((cols) =>
+            cols.map((c) =>
+              c.id === collectionId
+                ? { ...c, product_ids: productIds, product_count: productIds.length }
+                : c
+            )
+          );
           this.closeProductsModal();
           this.loadData();
         }

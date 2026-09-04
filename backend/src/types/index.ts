@@ -191,6 +191,7 @@ export interface CreateProductDto {
   featured_image_url?: string;
   is_active?: boolean;
   display_order?: number;
+  collection_ids?: number[];
   variants: CreateVariantDto[];
 }
 

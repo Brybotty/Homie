@@ -10,7 +10,7 @@ router.get('/', (0, validateDto_1.validate)([
     (0, express_validator_1.query)('category').optional().isString().trim(),
     (0, express_validator_1.query)('active').optional().isBoolean(),
     (0, express_validator_1.query)('page').optional().isInt({ min: 1 }),
-    (0, express_validator_1.query)('limit').optional().isInt({ min: 1, max: 100 }),
+    (0, express_validator_1.query)('limit').optional().isInt({ min: 1, max: 1000 }),
 ]), controller.getAll);
 router.get('/:slug', (0, validateDto_1.validate)([(0, express_validator_1.param)('slug').isString().trim().notEmpty().withMessage('El slug es requerido')]), controller.getBySlug);
 router.post('/', (0, validateDto_1.validate)([
@@ -21,6 +21,8 @@ router.post('/', (0, validateDto_1.validate)([
     (0, express_validator_1.body)('short_description').optional({ nullable: true }).isString().isLength({ max: 300 }),
     (0, express_validator_1.body)('featured_image_url').optional({ nullable: true }).isString(),
     (0, express_validator_1.body)('is_active').optional().isBoolean(),
+    (0, express_validator_1.body)('collection_ids').optional().isArray(),
+    (0, express_validator_1.body)('collection_ids.*').isInt(),
     (0, express_validator_1.body)('variants').isArray({ min: 1 }).withMessage('Debe incluir al menos una variante'),
     (0, express_validator_1.body)('variants.*.id').optional({ nullable: true }).isInt(),
     (0, express_validator_1.body)('variants.*.sku').trim().notEmpty().withMessage('El SKU de la variante es requerido'),
@@ -46,6 +48,8 @@ router.put('/:id', (0, validateDto_1.validate)([
     (0, express_validator_1.body)('short_description').optional({ nullable: true }).isString().isLength({ max: 300 }),
     (0, express_validator_1.body)('featured_image_url').optional({ nullable: true }).isString(),
     (0, express_validator_1.body)('is_active').optional().isBoolean(),
+    (0, express_validator_1.body)('collection_ids').optional().isArray(),
+    (0, express_validator_1.body)('collection_ids.*').isInt(),
     (0, express_validator_1.body)('variants').optional().isArray(),
     (0, express_validator_1.body)('variants.*.id').optional({ nullable: true }).isInt(),
     (0, express_validator_1.body)('variants.*.sku').optional().trim().notEmpty(),
