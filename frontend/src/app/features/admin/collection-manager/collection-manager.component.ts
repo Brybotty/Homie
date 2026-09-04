@@ -633,12 +633,17 @@ export class CollectionManagerComponent implements OnInit {
     });
   }
 
-  loadCandidateProducts(): void {
+  loadCandidateProducts(page = 1, accumulated: ProductWithVariants[] = []): void {
     this.isLoadingProducts.set(true);
-    this.api.getProducts({ limit: 500 }).subscribe({
+    this.api.getProducts({ limit: 100, page }).subscribe({
       next: (res) => {
         if (res.success) {
-          this.allProducts.set(res.data);
+          const combined = [...accumulated, ...res.data];
+          this.allProducts.set(combined);
+          if (res.total > combined.length && res.data.length > 0) {
+            this.loadCandidateProducts(page + 1, combined);
+            return;
+          }
         }
         this.isLoadingProducts.set(false);
       },
