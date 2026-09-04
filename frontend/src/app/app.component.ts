@@ -14,7 +14,9 @@ export class AppComponent implements OnInit {
   constructor(private auth: AuthService) {}
 
   async ngOnInit(): Promise<void> {
-    // Restaurar sesión al recargar la página (lee el JWT del localStorage)
-    await this.auth.loadCurrentUser();
+    // Si hay un token guardado, valida y sincroniza el perfil con el backend en segundo plano
+    if (this.auth.getToken()) {
+      await this.auth.loadCurrentUser();
+    }
   }
 }

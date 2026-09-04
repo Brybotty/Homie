@@ -1,6 +1,6 @@
 import { HttpInterceptorFn, HttpRequest, HttpHandlerFn } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { AuthService } from '../services/auth.service';
+
+const TOKEN_KEY = 'homie_auth_token';
 
 /**
  * Interceptor HTTP que añade automáticamente el header Authorization: Bearer <token>
@@ -10,11 +10,15 @@ export const authInterceptor: HttpInterceptorFn = (
   req: HttpRequest<unknown>,
   next: HttpHandlerFn
 ) => {
-  const auth = inject(AuthService);
-  const token = auth.getToken();
+  let token: string | null = null;
+  try {
+    token = localStorage.getItem(TOKEN_KEY);
+  } catch {
+    token = null;
+  }
 
   // Solo inyectar el token en peticiones a nuestra API
-  if (token && req.url.includes('/api/')) {
+  if (token && req.url.includes('/api')) {
     const authReq = req.clone({
       setHeaders: { Authorization: `Bearer ${token}` },
     });
@@ -23,3 +27,4 @@ export const authInterceptor: HttpInterceptorFn = (
 
   return next(req);
 };
+
