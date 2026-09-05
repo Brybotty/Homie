@@ -11,6 +11,7 @@
     "db:migrate:auth": "ts-node-dev --transpile-only src/scripts/migrate-auth.ts",
     "db:seed:mugs": "ts-node-dev --transpile-only src/scripts/seed-mugs.ts",
     "db:seed:bottles": "ts-node-dev --transpile-only src/scripts/seed-bottles.ts",
+    "db:seed:acero-marvel": "ts-node-dev --transpile-only src/scripts/seed-acero-marvel.ts",
     "seed": "ts-node-dev --transpile-only src/scripts/seed.ts",
     "lint": "eslint src --ext .ts"
   },
