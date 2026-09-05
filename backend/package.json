@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
+    "bundle": "esbuild src/server.ts --bundle --platform=node --target=node20 --outfile=dist/server.js --external:pg-native",
+    "build": "tsc && npm run bundle",
     "start": "node dist/server.js",
     "db:init": "ts-node-dev --transpile-only src/scripts/init-db.ts",
     "db:migrate:auth": "ts-node-dev --transpile-only src/scripts/migrate-auth.ts",
@@ -37,6 +38,7 @@
     "@types/pg": "^8.11.6",
     "@typescript-eslint/eslint-plugin": "^7.13.0",
     "@typescript-eslint/parser": "^7.13.0",
+    "esbuild": "^0.28.2",
     "eslint": "^8.57.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.4.5"
