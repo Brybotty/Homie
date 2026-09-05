@@ -11,7 +11,10 @@ import './config/passport'; // Registra la estrategia de Google
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const isAzure = !!process.env.WEBSITE_SITE_NAME;
+const PORT = isAzure
+  ? (process.env.PORT && process.env.PORT !== '3000' ? process.env.PORT : 8080)
+  : (process.env.PORT || 3000);
 const envOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',').map((url) => url.trim().replace(/\/$/, ''))
   : [];
