@@ -55502,8 +55502,8 @@ var routes_default = router7;
 // src/server.ts
 import_dotenv2.default.config();
 var app = (0, import_express8.default)();
-var isAzure = !!process.env.WEBSITE_SITE_NAME;
-var PORT = isAzure ? process.env.PORT && process.env.PORT !== "3000" ? process.env.PORT : 8080 : process.env.PORT || 3e3;
+var primaryPort = Number(process.env.WEBSITES_PORT || process.env.PORT || 3e3);
+var secondaryPort = Number(process.env.PORT || 8080);
 var envOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",").map((url) => url.trim().replace(/\/$/, "")) : [];
 var allowedOrigins = [
   ...envOrigins,
@@ -55563,11 +55563,16 @@ app.get("/", (_req, res) => {
 app.use("/api", routes_default);
 app.use(errorHandler);
 if (process.env.NODE_ENV !== "test") {
-  app.listen(PORT, () => {
-    console.log(`\u{1F680} [Homie Backend] Servidor ejecut\xE1ndose en http://localhost:${PORT}`);
-    console.log(`\u{1F4E6} [Homie Backend] Endpoints API listos en http://localhost:${PORT}/api`);
-    console.log(`\u{1F510} [Homie Backend] Auth Google: http://localhost:${PORT}/api/auth/google`);
+  app.listen(primaryPort, "0.0.0.0", () => {
+    console.log(`\u{1F680} [Homie Backend] Servidor ejecut\xE1ndose en http://0.0.0.0:${primaryPort}`);
+    console.log(`\u{1F4E6} [Homie Backend] Endpoints API listos en http://0.0.0.0:${primaryPort}/api`);
+    console.log(`\u{1F510} [Homie Backend] Auth Google: http://0.0.0.0:${primaryPort}/api/auth/google`);
   });
+  if (secondaryPort && secondaryPort !== primaryPort) {
+    app.listen(secondaryPort, "0.0.0.0", () => {
+      console.log(`\u{1F680} [Homie Backend] Servidor ejecut\xE1ndose tambi\xE9n en http://0.0.0.0:${secondaryPort}`);
+    });
+  }
 }
 var server_default = app;
 /*! Bundled license information:

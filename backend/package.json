@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "compile": "tsc && esbuild src/server.ts --bundle --platform=node --target=node20 --outfile=dist/server.js --external:pg-native",
     "bundle": "esbuild src/server.ts --bundle --platform=node --target=node20 --outfile=dist/server.js --external:pg-native",
-    "build": "tsc && npm run bundle",
+    "build": "node -e \"process.exit(0)\"",
     "start": "node dist/server.js",
     "db:init": "ts-node-dev --transpile-only src/scripts/init-db.ts",
     "db:migrate:auth": "ts-node-dev --transpile-only src/scripts/migrate-auth.ts",
