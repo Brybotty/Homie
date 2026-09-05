@@ -819,6 +819,7 @@ export class CheckoutComponent implements OnInit {
               payment_status: 'PAGADO',
             });
             this.cart.clear();
+            this.isSubmitting.set(false);
           } else if (transaction && transaction.status === 'PENDING') {
             // PSE en proceso de validación bancaria
             this.completedOrder.set({
@@ -827,19 +828,29 @@ export class CheckoutComponent implements OnInit {
               payment_status: 'PENDIENTE',
             });
             this.cart.clear();
+            this.isSubmitting.set(false);
           } else {
             // El cliente cerró la ventana o el banco rechazó -> EL PEDIDO NO SE CONFIRMA
             this.errorMessage.set(
               'El pago con PSE / Wompi no fue completado o fue cancelado. Tu pedido NO ha sido confirmado. Puedes intentar nuevamente o pagar con Nequi (320 618 2526) / Contraentrega.'
             );
+            this.isSubmitting.set(false);
           }
         });
       } else {
+        // Fallback: el widget no pudo cargar — abrimos el link externo de Wompi
+        // El pedido queda en PENDIENTE hasta que el webhook o el admin verifiquen el pago
         if (this.wompiPaymentLink) {
           window.open(this.wompiPaymentLink, '_blank');
         }
-        this.completedOrder.set(order);
+        // Mostramos el pedido como PENDIENTE (no confirmado) para que el cliente sepa que debe pagar
+        this.completedOrder.set({
+          ...order,
+          order_status: 'PENDIENTE' as any,
+          payment_status: 'PENDIENTE' as any,
+        });
         this.cart.clear();
+        this.isSubmitting.set(false);
       }
     };
 
@@ -851,6 +862,7 @@ export class CheckoutComponent implements OnInit {
       script.onload = openWidget;
       script.onerror = () => {
         this.errorMessage.set('No se pudo cargar la pasarela segura de Wompi. Por favor revisa tu conexión a internet.');
+        this.isSubmitting.set(false);
       };
       document.body.appendChild(script);
     } else {

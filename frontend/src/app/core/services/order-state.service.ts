@@ -81,4 +81,22 @@ export class OrderStateService {
   setStatusFilter(status: OrderStatus | 'ALL'): void {
     this.loadOrders(status);
   }
+
+  deleteOrder(id: number): Observable<any> {
+    return this.api.deleteOrder(id).pipe(
+      tap(() => {
+        this.loadOrders();
+        this.loadFinancialMetrics();
+      })
+    );
+  }
+
+  updateShippingCost(id: number, shipping_cost: number): Observable<any> {
+    return this.api.updateOrderShipping(id, shipping_cost).pipe(
+      tap(() => {
+        this.loadOrders();
+        this.loadFinancialMetrics();
+      })
+    );
+  }
 }

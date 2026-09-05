@@ -36,8 +36,23 @@ class OrderService {
         }
         return updated;
     }
+    async updateShippingCost(id, shippingCost) {
+        await this.getOrderById(id);
+        if (shippingCost < 0) {
+            throw new errorHandler_1.AppError('El costo de envío no puede ser negativo', 400);
+        }
+        const updated = await this.repo.updateShipping(id, shippingCost);
+        if (!updated) {
+            throw new errorHandler_1.AppError('Error al actualizar el costo de envío', 500);
+        }
+        return updated;
+    }
     async getFinancialSummary() {
         return this.repo.getFinancialSummary();
+    }
+    async deleteOrder(id) {
+        const order = await this.getOrderById(id);
+        await this.repo.deleteOrder(order.id);
     }
     /**
      * Valida la firma criptográfica (SHA256) de un evento enviado por Wompi usando WOMPI_EVENTS_SECRET.

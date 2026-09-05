@@ -77,4 +77,33 @@ router.post(
 // POST /api/orders/wompi-webhook — Webhook oficial para actualización de pagos de Wompi (público)
 router.post('/wompi-webhook', controller.wompiWebhook);
 
+// PATCH /api/orders/:id/shipping — Actualizar precio de envío (solo administrador)
+router.patch(
+  '/:id/shipping',
+  requireAdmin,
+  validate([
+    param('id').isInt().withMessage('El ID debe ser un número entero'),
+    body('shipping_cost').isFloat({ min: 0 }).withMessage('El costo de envío debe ser un número positivo'),
+  ]),
+  async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const { OrderService } = await import('../services/order.service');
+      const svc = new OrderService();
+      const order = await svc.updateShippingCost(id, parseFloat(req.body.shipping_cost));
+      res.json({ success: true, data: order, message: 'Costo de envío actualizado correctamente' });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// DELETE /api/orders/:id — Eliminar un pedido (solo administrador)
+router.delete(
+  '/:id',
+  requireAdmin,
+  validate([param('id').isInt().withMessage('El ID debe ser un número entero')]),
+  controller.deleteOrder
+);
+
 export default router;

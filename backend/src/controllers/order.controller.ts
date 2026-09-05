@@ -131,5 +131,19 @@ export class OrderController {
       next(err);
     }
   };
+
+  deleteOrder = async (
+    req: Request,
+    res: Response<ApiResponse<any>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      await this.service.deleteOrder(id);
+      res.json({ success: true, data: null, message: `Pedido #${id} eliminado correctamente` });
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 

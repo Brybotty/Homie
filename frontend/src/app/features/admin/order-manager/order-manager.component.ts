@@ -1,8 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+﻿import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { OrderStateService } from '../../../core/services/order-state.service';
-import { OrderDetail, OrderStatus, PaymentStatus } from '../../../core/models';
+import { OrderDetail, OrderStatus } from '../../../core/models';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
 
@@ -16,14 +16,10 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 class="text-3xl font-black text-white tracking-tight">Gestor de Pedidos</h1>
-          <p class="text-slate-400 text-sm mt-1">Control de despachos, pagos contraentrega y guías de transporte.</p>
+          <p class="text-slate-400 text-sm mt-1">Control de despachos, pagos contraentrega y guias de transporte.</p>
         </div>
-
         <div class="flex items-center gap-2">
-          <button
-            (click)="refresh()"
-            class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
-          >
+          <button (click)="refresh()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
@@ -35,22 +31,16 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
       <!-- Filter Tabs -->
       <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
         @for (f of filters; track f.value) {
-          <button
-            (click)="setFilter(f.value)"
-            [ngClass]="orderState.statusFilter() === f.value ? 'bg-emerald-600 text-white font-black shadow-lg shadow-emerald-600/20' : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'"
-            class="px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer shrink-0"
-          >
+          <button (click)="setFilter(f.value)" [ngClass]="orderState.statusFilter() === f.value ? 'bg-emerald-600 text-white font-black shadow-lg shadow-emerald-600/20' : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'" class="px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer shrink-0">
             {{ f.label }}
           </button>
         }
       </div>
 
-      <!-- Orders List / Table -->
+      <!-- Orders List -->
       <div class="bg-slate-950 rounded-3xl border border-slate-800 p-6 space-y-4 shadow-sm">
         @if (orderState.loading()) {
-          <div class="py-16 text-center text-slate-400 text-xs animate-pulse">
-            Cargando pedidos...
-          </div>
+          <div class="py-16 text-center text-slate-400 text-xs animate-pulse">Cargando pedidos...</div>
         } @else if (orderState.orders().length === 0) {
           <div class="py-16 text-center space-y-2">
             <div class="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-slate-500 mx-auto">
@@ -64,67 +54,58 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
           <div class="space-y-4">
             @for (order of orderState.orders(); track order.id) {
               <div class="p-5 bg-slate-900 rounded-2xl border border-slate-800 space-y-4 hover:border-slate-700 transition-colors">
-                <!-- Header de Orden -->
+                <!-- Header -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
                   <div class="flex items-center gap-3">
                     <span class="font-mono font-black text-white text-base">{{ order.order_code }}</span>
                     <app-status-badge [status]="order.order_status" type="order"></app-status-badge>
                     <app-status-badge [status]="order.payment_status" type="payment"></app-status-badge>
                   </div>
-
                   <div class="flex items-center gap-2 text-xs flex-wrap justify-end">
                     <span class="text-slate-400">{{ order.created_at | date:'short' }}</span>
                     @if (order.payment_status !== 'PAGADO' && (order.payment_method === 'PSE' || order.payment_method === 'WOMPI')) {
-                      <button
-                        (click)="syncWompi(order.id)"
-                        [disabled]="syncingId() === order.id"
-                        class="px-2.5 py-1.5 bg-sky-500/10 text-sky-400 hover:bg-sky-600 hover:text-white rounded-lg font-bold transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50"
-                        title="Verificar estado de la transacción en Wompi"
-                      >
+                      <button (click)="syncWompi(order.id)" [disabled]="syncingId() === order.id" class="px-2.5 py-1.5 bg-sky-500/10 text-sky-400 hover:bg-sky-600 hover:text-white rounded-lg font-bold transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50" title="Verificar estado en Wompi">
                         <svg class="w-3.5 h-3.5" [class.animate-spin]="syncingId() === order.id" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                         <span>{{ syncingId() === order.id ? 'Consultando...' : 'Verificar Wompi' }}</span>
                       </button>
                     }
-                    <button
-                      (click)="openTrackingModal(order)"
-                      class="px-3 py-1.5 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg font-bold transition-colors cursor-pointer"
-                    >
-                      Gestionar Guía / Estado
+                    <button (click)="openTrackingModal(order)" class="px-3 py-1.5 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg font-bold transition-colors cursor-pointer">
+                      Gestionar / Estado
+                    </button>
+                    <button (click)="confirmDelete(order)" [disabled]="deletingId() === order.id" class="px-3 py-1.5 bg-rose-600/10 text-rose-400 hover:bg-rose-600 hover:text-white rounded-lg font-bold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1" title="Eliminar pedido">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      <span>{{ deletingId() === order.id ? 'Eliminando...' : 'Eliminar' }}</span>
                     </button>
                   </div>
                 </div>
 
-                <!-- Datos del Cliente y Despacho -->
+                <!-- Datos -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div class="space-y-1">
                     <span class="text-slate-500 uppercase tracking-wider font-bold">Cliente</span>
                     <p class="font-bold text-slate-200">{{ order.customer.full_name }}</p>
                     <p class="text-slate-400">Tel: <span class="text-slate-200 font-mono">{{ order.customer.phone }}</span></p>
-                    @if (order.customer.email) {
-                      <p class="text-slate-400">{{ order.customer.email }}</p>
-                    }
+                    @if (order.customer.email) { <p class="text-slate-400">{{ order.customer.email }}</p> }
                   </div>
-
                   <div class="space-y-1">
                     <span class="text-slate-500 uppercase tracking-wider font-bold">Destino Entrega</span>
                     <p class="text-slate-200">{{ order.customer.address }}</p>
                     <p class="text-slate-400">{{ order.customer.neighborhood || '' }} {{ order.customer.city }} ({{ order.customer.department }})</p>
-                    @if (order.delivery_notes) {
-                      <p class="text-amber-400/90 italic">"{{ order.delivery_notes }}"</p>
-                    }
+                    @if (order.delivery_notes) { <p class="text-amber-400/90 italic">"{{ order.delivery_notes }}"</p> }
                   </div>
-
                   <div class="space-y-1">
-                    <span class="text-slate-500 uppercase tracking-wider font-bold">Transporte & Guía</span>
+                    <span class="text-slate-500 uppercase tracking-wider font-bold">Transporte & Guia</span>
                     @if (order.tracking_number) {
                       <p class="text-slate-200 font-bold">Transportadora: <span class="text-emerald-400">{{ order.shipping_carrier }}</span></p>
-                      <p class="text-slate-400 font-mono">Guía: <span class="text-white">{{ order.tracking_number }}</span></p>
+                      <p class="text-slate-400 font-mono">Guia: <span class="text-white">{{ order.tracking_number }}</span></p>
                     } @else {
-                      <p class="text-amber-400 italic">Pendiente por generar guía</p>
+                      <p class="text-amber-400 italic">Pendiente por generar guia</p>
                     }
-                    <p class="text-slate-400">Método de pago: <span class="text-slate-200 font-bold">{{ order.payment_method }}</span></p>
+                    <p class="text-slate-400">Metodo de pago: <span class="text-slate-200 font-bold">{{ order.payment_method }}</span></p>
                   </div>
                 </div>
 
@@ -140,15 +121,14 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
                           <span class="text-[10px] font-mono text-slate-500 bg-slate-900 px-1.5 py-0.5 rounded">SKU: {{ item.sku_snapshot }}</span>
                         </div>
                         <div class="flex items-center gap-4">
-                          <span class="text-slate-400">{{ item.quantity }} un. × {{ item.unit_price | copCurrency }}</span>
+                          <span class="text-slate-400">{{ item.quantity }} un. x {{ item.unit_price | copCurrency }}</span>
                           <span class="font-extrabold text-slate-200">{{ item.total_price | copCurrency }}</span>
                         </div>
                       </div>
                     }
                   </div>
-
                   <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-xs">
-                    <span class="text-slate-400">Subtotal: {{ order.subtotal | copCurrency }} | Envío: {{ order.shipping_cost | copCurrency }}</span>
+                    <span class="text-slate-400">Subtotal: {{ order.subtotal | copCurrency }} | Envio: {{ order.shipping_cost | copCurrency }}</span>
                     <span class="text-sm font-black text-emerald-400">Total: {{ order.total_amount | copCurrency }}</span>
                   </div>
                 </div>
@@ -158,7 +138,7 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
         }
       </div>
 
-      <!-- Modal de Actualización de Guía / Estado -->
+      <!-- Modal Actualizar Estado -->
       @if (selectedOrder()) {
         <div class="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div class="bg-slate-950 rounded-3xl p-6 sm:p-8 border border-slate-800 w-full max-w-lg space-y-6 shadow-2xl">
@@ -167,24 +147,16 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
                 <h3 class="text-lg font-black text-white">Actualizar Pedido</h3>
                 <p class="text-xs text-emerald-400 font-mono">{{ selectedOrder()!.order_code }}</p>
               </div>
-              <button
-                (click)="closeModal()"
-                class="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-900"
-              >
-                ✕
-              </button>
+              <button (click)="closeModal()" class="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-900">X</button>
             </div>
 
             <form [formGroup]="statusForm" (ngSubmit)="saveOrderStatus()" class="space-y-4 text-xs">
               <div>
                 <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Estado del Pedido</label>
-                <select
-                  formControlName="order_status"
-                  class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:border-emerald-500 focus:outline-none"
-                >
+                <select formControlName="order_status" class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:border-emerald-500 focus:outline-none">
                   <option value="PENDIENTE">PENDIENTE</option>
                   <option value="CONFIRMADO">CONFIRMADO</option>
-                  <option value="EN_PREPARACION">EN PREPARACIÓN</option>
+                  <option value="EN_PREPARACION">EN PREPARACION</option>
                   <option value="DESPACHADO">DESPACHADO</option>
                   <option value="ENTREGADO">ENTREGADO</option>
                   <option value="CANCELADO">CANCELADO</option>
@@ -193,10 +165,7 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
 
               <div>
                 <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Estado del Pago</label>
-                <select
-                  formControlName="payment_status"
-                  class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:border-emerald-500 focus:outline-none"
-                >
+                <select formControlName="payment_status" class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:border-emerald-500 focus:outline-none">
                   <option value="PENDIENTE">PENDIENTE</option>
                   <option value="PAGADO">PAGADO</option>
                   <option value="CONTRAENTREGA">CONTRAENTREGA</option>
@@ -206,41 +175,58 @@ import { CopCurrencyPipe } from '../../../shared/pipes/cop-currency.pipe';
               </div>
 
               <div>
-                <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Empresa Transportadora</label>
-                <input
-                  type="text"
-                  formControlName="shipping_carrier"
-                  placeholder="Ej. Inter Rapidísimo, Servientrega, Envía, Coordinadora"
-                  class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:border-emerald-500 focus:outline-none"
-                />
+                <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Costo de Envio (COP) <span class="normal-case font-normal text-slate-500">- recalcula el total</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                  <input type="number" formControlName="shipping_cost" min="0" step="1000" placeholder="12000" class="w-full pl-7 pr-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:border-emerald-500 focus:outline-none" />
+                </div>
               </div>
 
               <div>
-                <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Número de Guía de Rastreo</label>
-                <input
-                  type="text"
-                  formControlName="tracking_number"
-                  placeholder="Ej. 700012345678"
-                  class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs font-mono focus:border-emerald-500 focus:outline-none"
-                />
+                <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Empresa Transportadora</label>
+                <input type="text" formControlName="shipping_carrier" placeholder="Ej. Inter Rapidisimo, Servientrega, Envia, Coordinadora" class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:border-emerald-500 focus:outline-none" />
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Numero de Guia de Rastreo</label>
+                <input type="text" formControlName="tracking_number" placeholder="Ej. 700012345678" class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs font-mono focus:border-emerald-500 focus:outline-none" />
               </div>
 
               <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
-                <button
-                  type="button"
-                  (click)="closeModal()"
-                  class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl"
-                >
-                  Guardar Cambios
-                </button>
+                <button type="button" (click)="closeModal()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl">Cancelar</button>
+                <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl">Guardar Cambios</button>
               </div>
             </form>
+          </div>
+        </div>
+      }
+
+      <!-- Modal Confirmar Eliminacion -->
+      @if (orderToDelete()) {
+        <div class="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div class="bg-slate-950 rounded-3xl p-6 sm:p-8 border border-rose-900/60 w-full max-w-sm space-y-5 shadow-2xl">
+            <div class="flex flex-col items-center gap-3 text-center">
+              <div class="w-14 h-14 rounded-full bg-rose-950 flex items-center justify-center">
+                <svg class="w-7 h-7 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-base font-black text-white">Eliminar pedido?</h3>
+                <p class="text-xs text-slate-400 mt-1">
+                  Pedido <span class="font-mono text-rose-300">{{ orderToDelete()!.order_code }}</span> - Esta accion es <strong class="text-rose-400">irreversible</strong>.
+                  @if (orderToDelete()!.order_status !== 'CANCELADO') {
+                    El stock se devolvera al inventario.
+                  }
+                </p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <button type="button" (click)="orderToDelete.set(null)" class="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl text-sm">Cancelar</button>
+              <button type="button" (click)="executeDelete()" class="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-extrabold rounded-xl text-sm">Si, eliminar</button>
+            </div>
           </div>
         </div>
       }
@@ -252,13 +238,16 @@ export class OrderManagerComponent implements OnInit {
   private fb = inject(FormBuilder);
 
   selectedOrder = signal<OrderDetail | null>(null);
+  orderToDelete = signal<OrderDetail | null>(null);
+  syncingId = signal<number | null>(null);
+  deletingId = signal<number | null>(null);
   statusForm!: FormGroup;
 
   readonly filters: { label: string; value: OrderStatus | 'ALL' }[] = [
     { label: 'Todos', value: 'ALL' },
     { label: 'Pendientes', value: 'PENDIENTE' },
     { label: 'Confirmados', value: 'CONFIRMADO' },
-    { label: 'En Preparación', value: 'EN_PREPARACION' },
+    { label: 'En Preparacion', value: 'EN_PREPARACION' },
     { label: 'Despachados', value: 'DESPACHADO' },
     { label: 'Entregados', value: 'ENTREGADO' },
     { label: 'Cancelados', value: 'CANCELADO' },
@@ -269,60 +258,73 @@ export class OrderManagerComponent implements OnInit {
     this.statusForm = this.fb.group({
       order_status: ['PENDIENTE', Validators.required],
       payment_status: ['PENDIENTE', Validators.required],
+      shipping_cost: [0, [Validators.required, Validators.min(0)]],
       shipping_carrier: [''],
       tracking_number: [''],
     });
   }
 
-  refresh(): void {
-    this.orderState.loadOrders();
-  }
+  refresh(): void { this.orderState.loadOrders(); }
 
-  setFilter(status: OrderStatus | 'ALL'): void {
-    this.orderState.setStatusFilter(status);
-  }
+  setFilter(status: OrderStatus | 'ALL'): void { this.orderState.setStatusFilter(status); }
 
   openTrackingModal(order: OrderDetail): void {
     this.selectedOrder.set(order);
     this.statusForm.patchValue({
       order_status: order.order_status,
       payment_status: order.payment_status,
+      shipping_cost: order.shipping_cost ?? 0,
       shipping_carrier: order.shipping_carrier || '',
       tracking_number: order.tracking_number || '',
     });
   }
 
-  closeModal(): void {
-    this.selectedOrder.set(null);
-  }
+  closeModal(): void { this.selectedOrder.set(null); }
 
   saveOrderStatus(): void {
     const order = this.selectedOrder();
-    if (!order) return;
+    if (!order || this.statusForm.invalid) return;
 
-    this.orderState.updateOrderStatus(order.id, this.statusForm.value).subscribe({
-      next: () => {
-        this.closeModal();
-      },
-      error: (err) => {
-        alert(err.error?.error || 'Error al actualizar el estado');
-      },
-    });
+    const { shipping_cost, ...statusDto } = this.statusForm.value;
+    const newShipping = parseFloat(shipping_cost);
+    const originalShipping = order.shipping_cost ?? 0;
+
+    if (newShipping !== originalShipping) {
+      this.orderState.updateShippingCost(order.id, newShipping).subscribe({
+        next: () => {
+          this.orderState.updateOrderStatus(order.id, statusDto).subscribe({
+            next: () => this.closeModal(),
+            error: (err: any) => alert(err.error?.error || 'Error al actualizar el estado'),
+          });
+        },
+        error: (err: any) => alert(err.error?.error || 'Error al actualizar el envio'),
+      });
+    } else {
+      this.orderState.updateOrderStatus(order.id, statusDto).subscribe({
+        next: () => this.closeModal(),
+        error: (err: any) => alert(err.error?.error || 'Error al actualizar el estado'),
+      });
+    }
   }
-
-  syncingId = signal<number | null>(null);
 
   syncWompi(orderId: number): void {
     this.syncingId.set(orderId);
     this.orderState.syncWompi(orderId).subscribe({
-      next: (res) => {
-        this.syncingId.set(null);
-        alert(res.message || 'Estado de la orden sincronizado con Wompi exitosamente');
-      },
-      error: (err) => {
-        this.syncingId.set(null);
-        alert(err.error?.message || err.error?.error || 'No se pudo consultar Wompi o no hay transacción registrada');
-      },
+      next: (res: any) => { this.syncingId.set(null); alert(res.message || 'Estado sincronizado con Wompi'); },
+      error: (err: any) => { this.syncingId.set(null); alert(err.error?.message || err.error?.error || 'No se pudo consultar Wompi'); },
+    });
+  }
+
+  confirmDelete(order: OrderDetail): void { this.orderToDelete.set(order); }
+
+  executeDelete(): void {
+    const order = this.orderToDelete();
+    if (!order) return;
+    this.deletingId.set(order.id);
+    this.orderToDelete.set(null);
+    this.orderState.deleteOrder(order.id).subscribe({
+      next: () => { this.deletingId.set(null); },
+      error: (err: any) => { this.deletingId.set(null); alert(err.error?.error || 'Error al eliminar el pedido'); },
     });
   }
 }

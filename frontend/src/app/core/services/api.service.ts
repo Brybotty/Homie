@@ -146,4 +146,12 @@ export class ApiService {
   syncWompiOrder(id: number): Observable<ApiResponse<OrderDetail>> {
     return this.http.post<ApiResponse<OrderDetail>>(`${this.baseUrl}/orders/${id}/sync-wompi`, {});
   }
+
+  deleteOrder(id: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.baseUrl}/orders/${id}`);
+  }
+
+  updateOrderShipping(id: number, shipping_cost: number): Observable<ApiResponse<any>> {
+    return this.http.patch<ApiResponse<any>>(`${this.baseUrl}/orders/${id}/shipping`, { shipping_cost });
+  }
 }

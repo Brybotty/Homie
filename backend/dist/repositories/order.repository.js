@@ -364,6 +364,15 @@ class OrderRepository {
             client.release();
         }
     }
+    async updateShipping(id, shippingCost) {
+        const result = await database_1.pool.query(`UPDATE orders
+       SET shipping_cost = $1,
+           total_amount  = subtotal - discount_amount + $1,
+           updated_at    = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING *`, [shippingCost, id]);
+        return result.rows[0] || null;
+    }
     async getFinancialSummary() {
         const query = 'SELECT * FROM v_order_financial_summary ORDER BY created_at DESC';
         const result = await database_1.pool.query(query);
@@ -378,6 +387,39 @@ class OrderRepository {
     async findByCode(orderCode) {
         const res = await database_1.pool.query('SELECT * FROM orders WHERE order_code = $1', [orderCode]);
         return res.rows[0] || null;
+    }
+    async deleteOrder(id) {
+        const client = await database_1.pool.connect();
+        try {
+            await client.query('BEGIN');
+            // Obtener la orden para verificar si hay que devolver stock
+            const orderRes = await client.query('SELECT * FROM orders WHERE id = $1 FOR UPDATE', [id]);
+            if (orderRes.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return;
+            }
+            const order = orderRes.rows[0];
+            // Si no estaba CANCELADO, devolver stock al inventario
+            if (order.order_status !== 'CANCELADO') {
+                const itemsRes = await client.query('SELECT * FROM order_items WHERE order_id = $1', [id]);
+                for (const item of itemsRes.rows) {
+                    if (item.variant_id) {
+                        await client.query(`UPDATE product_variants SET stock_quantity = stock_quantity + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [item.quantity, item.variant_id]);
+                    }
+                }
+            }
+            // Eliminar items y luego el pedido (cascada)
+            await client.query('DELETE FROM order_items WHERE order_id = $1', [id]);
+            await client.query('DELETE FROM orders WHERE id = $1', [id]);
+            await client.query('COMMIT');
+        }
+        catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        }
+        finally {
+            client.release();
+        }
     }
 }
 exports.OrderRepository = OrderRepository;

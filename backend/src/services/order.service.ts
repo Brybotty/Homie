@@ -51,9 +51,27 @@ export class OrderService {
     return updated;
   }
 
-  async getFinancialSummary(): Promise<OrderFinancialSummary[]> {
+  async updateShippingCost(id: number, shippingCost: number): Promise<Order> {
+    await this.getOrderById(id);
+    if (shippingCost < 0) {
+      throw new AppError('El costo de envío no puede ser negativo', 400);
+    }
+    const updated = await this.repo.updateShipping(id, shippingCost);
+    if (!updated) {
+      throw new AppError('Error al actualizar el costo de envío', 500);
+    }
+    return updated;
+  }
+
+async getFinancialSummary(): Promise<OrderFinancialSummary[]> {
     return this.repo.getFinancialSummary();
   }
+
+  async deleteOrder(id: number): Promise<void> {
+    const order = await this.getOrderById(id);
+    await this.repo.deleteOrder(order.id);
+  }
+
 
   /**
    * Valida la firma criptográfica (SHA256) de un evento enviado por Wompi usando WOMPI_EVENTS_SECRET.
