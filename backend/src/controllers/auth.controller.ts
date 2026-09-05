@@ -15,18 +15,20 @@ export class AuthController {
   googleCallback = (req: Request, res: Response, next: NextFunction): void => {
     try {
       const user = req.user as any;
+      const defaultFrontend =
+        process.env.FRONTEND_URL ||
+        (process.env.NODE_ENV === 'production'
+          ? 'https://homie-mugs.com'
+          : 'http://localhost:4200');
+
       if (!user) {
-        res.redirect(
-          `${process.env.FRONTEND_URL || 'http://localhost:4200'}/auth/callback?error=auth_failed`
-        );
+        res.redirect(`${defaultFrontend}/auth/callback?error=auth_failed`);
         return;
       }
 
       const token = authService.signToken(user);
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
-
       // Redirige al frontend con el JWT como query param
-      res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
+      res.redirect(`${defaultFrontend}/auth/callback?token=${token}`);
     } catch (err) {
       next(err);
     }

@@ -12,28 +12,47 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
+const envOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map((url) => url.trim().replace(/\/$/, ''))
+  : [];
+
 const allowedOrigins = [
-  FRONTEND_URL,
+  ...envOrigins,
+  'https://homie-mugs.com',
+  'https://www.homie-mugs.com',
+  'http://homie-mugs.com',
+  'http://www.homie-mugs.com',
   'http://localhost:4200',
   'http://127.0.0.1:4200',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
 ];
 
 // Security and middleware
-app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
+      const normalizedOrigin = origin.replace(/\/$/, '');
       if (
-        allowedOrigins.includes(origin) ||
-        origin.endsWith('.vercel.app')
+        allowedOrigins.includes(normalizedOrigin) ||
+        normalizedOrigin.endsWith('.vercel.app') ||
+        normalizedOrigin.endsWith('.homie-mugs.com') ||
+        normalizedOrigin.endsWith('.azurewebsites.net')
       ) {
         return callback(null, true);
       }
-      return callback(new Error(`CORS bloqueado para el origen: ${origin}`));
+      console.warn(`[CORS] Origen no permitido: ${origin}`);
+      return callback(null, false);
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  })
+);
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 );
 app.use(morgan('dev'));

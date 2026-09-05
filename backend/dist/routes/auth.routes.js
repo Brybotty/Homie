@@ -21,9 +21,13 @@ router.get('/google', passport_1.default.authenticate('google', {
  * Google redirige aquí tras el consentimiento.
  * Passport valida el código, crea/actualiza el usuario y emite el JWT.
  */
+const defaultFrontendUrl = process.env.FRONTEND_URL ||
+    (process.env.NODE_ENV === 'production'
+        ? 'https://homie-mugs.com'
+        : 'http://localhost:4200');
 router.get('/google/callback', passport_1.default.authenticate('google', {
     session: false,
-    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:4200'}/auth/callback?error=auth_failed`,
+    failureRedirect: `${defaultFrontendUrl}/auth/callback?error=auth_failed`,
 }), controller.googleCallback);
 /** Perfil del usuario autenticado (requiere JWT válido). */
 router.get('/me', authMiddleware_1.requireAuth, controller.me);
