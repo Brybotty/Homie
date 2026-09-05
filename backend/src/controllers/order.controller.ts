@@ -132,6 +132,21 @@ export class OrderController {
     }
   };
 
+  updateShipping = async (
+    req: Request,
+    res: Response<ApiResponse<any>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const shippingCost = parseFloat(req.body.shipping_cost);
+      const order = await this.service.updateShippingCost(id, shippingCost);
+      res.json({ success: true, data: order, message: 'Costo de envío actualizado correctamente' });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   deleteOrder = async (
     req: Request,
     res: Response<ApiResponse<any>>,
