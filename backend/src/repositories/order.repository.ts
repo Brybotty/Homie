@@ -128,9 +128,9 @@ export class OrderRepository {
       // 3. Create Order
       const shippingCost = dto.shipping_cost || 0;
       const discountAmount = dto.discount_amount || 0;
-      const totalAmount = Math.max(0, subtotal + shippingCost - discountAmount);
-      const orderCode = this.generateOrderCode();
-      const initialPaymentStatus = dto.payment_method === 'CONTRAENTREGA' ? 'CONTRAENTREGA' : 'PENDIENTE';
+      const orderCode = dto.order_code || this.generateOrderCode();
+      const initialPaymentStatus = dto.payment_status || (dto.payment_method === 'CONTRAENTREGA' ? 'CONTRAENTREGA' : 'PENDIENTE');
+      const initialOrderStatus = dto.order_status || 'PENDIENTE';
 
       const insertOrderQuery = `
         INSERT INTO orders (
@@ -147,7 +147,7 @@ export class OrderRepository {
         shippingCost,
         discountAmount,
         totalAmount,
-        'PENDIENTE',
+        initialOrderStatus,
         initialPaymentStatus,
         dto.payment_method || null,
         dto.delivery_notes || null,

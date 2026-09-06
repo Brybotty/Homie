@@ -228,6 +228,9 @@ export interface CreateOrderDto {
   discount_amount?: number;
   payment_method?: PaymentMethod;
   delivery_notes?: string;
+  order_code?: string;
+  order_status?: OrderStatus;
+  payment_status?: PaymentStatus;
 }
 
 export interface UpdateOrderStatusDto {

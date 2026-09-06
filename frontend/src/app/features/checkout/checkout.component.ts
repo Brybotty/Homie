@@ -110,36 +110,44 @@ import { environment } from '../../../environments/environment';
                   </div>
                   <div>
                     <h4 class="font-extrabold text-sm text-sky-950 leading-tight">Pago PSE / Wompi (Bancolombia)</h4>
-                    <p class="text-[11px] text-sky-700">Débito desde tu banco y tarjetas</p>
+                    <p class="text-[11px] text-sky-700">Débito bancario y transferencias</p>
                   </div>
                 </div>
-                <span class="text-xs font-extrabold text-sky-800 bg-sky-100 px-3 py-1 rounded-full">
-                  Pasarela Segura
+                <span class="text-xs font-extrabold px-3 py-1 rounded-full" [ngClass]="completedOrder()!.payment_status === 'PAGADO' ? 'text-emerald-800 bg-emerald-100' : 'text-sky-800 bg-sky-100'">
+                  {{ completedOrder()!.payment_status === 'PAGADO' ? '✓ Pago Aprobado' : 'Validación Pendiente' }}
                 </span>
               </div>
 
               <div class="p-4 bg-white rounded-xl border border-sky-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                 <div>
-                  <span class="text-[10px] uppercase font-bold text-slate-400 block">Total de tu orden:</span>
+                  <span class="text-[10px] uppercase font-bold text-slate-400 block">{{ completedOrder()!.payment_status === 'PAGADO' ? 'Total pagado con éxito:' : 'Total de tu orden:' }}</span>
                   <span class="text-2xl font-black text-sky-950 font-mono">{{ completedOrder()!.total_amount | copCurrency }}</span>
                 </div>
-                <div>
-                  <a
-                    [href]="wompiPaymentLink"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-700 hover:from-sky-500 hover:to-indigo-600 text-white font-extrabold text-sm rounded-xl shadow-md shadow-sky-600/30 transition-all hover:scale-105 active:scale-95"
-                  >
-                    <span>🔒 Pagar ahora en Wompi</span>
-                    <span>→</span>
-                  </a>
-                </div>
+                @if (completedOrder()!.payment_status !== 'PAGADO') {
+                  <div>
+                    <a
+                      [href]="wompiPaymentLink"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-700 hover:from-sky-500 hover:to-indigo-600 text-white font-extrabold text-sm rounded-xl shadow-md shadow-sky-600/30 transition-all hover:scale-105 active:scale-95"
+                    >
+                      <span>🔒 Pagar ahora en Wompi</span>
+                      <span>→</span>
+                    </a>
+                  </div>
+                }
               </div>
 
               <div class="p-3 bg-sky-100/70 rounded-xl text-xs text-sky-950 space-y-1 leading-relaxed">
-                <p>
-                  💡 <strong>Instrucciones:</strong> Haz clic en el botón azul <strong>"Pagar ahora en Wompi"</strong> para ingresar al portal protegido de Bancolombia y realizar tu débito bancario vía <strong>PSE</strong> o tarjeta.
-                </p>
+                @if (completedOrder()!.payment_status === 'PAGADO') {
+                  <p class="text-emerald-900 font-semibold">
+                    ✓ <strong>Tu pago fue acreditado y aprobado correctamente por la pasarela de Wompi.</strong> Estamos listos para empacar y despachar tu pedido.
+                  </p>
+                } @else {
+                  <p>
+                    💡 <strong>Instrucciones:</strong> Tu pago está en validación bancaria o puedes completarlo haciendo clic en <strong>"Pagar ahora en Wompi"</strong>.
+                  </p>
+                }
                 <p class="text-[11px] text-sky-800">
                   Referencia de orden: <strong class="font-mono font-bold text-sky-950">{{ completedOrder()!.order_code }}</strong>
                 </p>
@@ -545,7 +553,7 @@ import { environment } from '../../../environments/environment';
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                       </svg>
-                      <span>Generando Pago Seguro...</span>
+                      <span>{{ f['payment_method'].value === 'PSE' ? 'Abriendo Pasarela Segura Wompi...' : 'Procesando Pedido...' }}</span>
                     } @else if (f['payment_method'].value === 'PSE') {
                       <span>🔒 Pagar con PSE / Wompi ({{ grandTotal | copCurrency }})</span>
                     } @else if (f['payment_method'].value === 'NEQUI') {
@@ -749,14 +757,14 @@ export class CheckoutComponent implements OnInit {
 
     const dto: CreateOrderDto = {
       customer: {
-        full_name: formVal.full_name,
-        phone: formVal.phone,
-        email: formVal.email || undefined,
-        document_id: formVal.document_id || undefined,
-        address: formVal.address,
-        neighborhood: formVal.neighborhood || undefined,
-        city: formVal.city,
-        department: formVal.department,
+        full_name: formVal.full_name.trim(),
+        phone: formVal.phone.trim(),
+        email: formVal.email?.trim() || undefined,
+        document_id: formVal.document_id?.trim() || undefined,
+        address: formVal.address.trim(),
+        neighborhood: formVal.neighborhood?.trim() || undefined,
+        city: formVal.city.trim(),
+        department: formVal.department.trim(),
       },
       items: this.cart.items().map((item) => ({
         variant_id: item.variant_id,
@@ -768,17 +776,19 @@ export class CheckoutComponent implements OnInit {
       delivery_notes: notes || undefined,
     };
 
+    // Si el usuario seleccionó PSE / Wompi: NO se crea la orden en la BD ni en el panel Admin
+    // hasta que la transacción sea APROBADA en Wompi
+    if (formVal.payment_method === 'PSE') {
+      this.launchWompiCheckout(dto, formVal, notes);
+      return;
+    }
+
+    // Para Contraentrega o Nequi: Creación directa del pedido
     this.api.createOrder(dto).subscribe({
       next: (res) => {
         if (res.success && res.data) {
-          if (formVal.payment_method === 'PSE') {
-            // Para PSE / Wompi: NO confirmamos de inmediato, abrimos el Widget oficial con el monto exacto fijado
-            this.launchWompiCheckout(res.data);
-          } else {
-            // Para Contraentrega o Nequi: confirmación directa del pedido
-            this.completedOrder.set(res.data);
-            this.cart.clear();
-          }
+          this.completedOrder.set(res.data);
+          this.cart.clear();
         }
         this.isSubmitting.set(false);
       },
@@ -789,84 +799,148 @@ export class CheckoutComponent implements OnInit {
     });
   }
 
-  launchWompiCheckout(order: OrderDetail): void {
-    const totalInCents = Math.round(order.total_amount * 100);
-    const scriptId = 'wompi-checkout-widget-script';
+  launchWompiCheckout(baseDto: CreateOrderDto, formVal: any, notes: string): void {
+    const totalInCents = Math.round(this.grandTotal * 100);
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const reference = `HOM-${timestamp}-${random}`;
+
+    let cleanPhone = formVal.phone.trim().replace(/\D/g, '');
+    if (cleanPhone.startsWith('57') && cleanPhone.length === 12) {
+      cleanPhone = cleanPhone.substring(2);
+    }
+
+    const customerData: any = {
+      fullName: formVal.full_name.trim(),
+      phoneNumber: cleanPhone,
+      phoneNumberPrefix: '+57',
+    };
+    if (formVal.email && formVal.email.trim()) {
+      customerData.email = formVal.email.trim();
+    }
 
     const openWidget = () => {
       // @ts-ignore
-      if (typeof WidgetCheckout !== 'undefined') {
-        // @ts-ignore
-        const checkout = new WidgetCheckout({
+      const Widget = (window as any).WidgetCheckout || (typeof WidgetCheckout !== 'undefined' ? WidgetCheckout : null);
+
+      if (!Widget) {
+        console.error('Wompi WidgetCheckout no está disponible en window');
+        this.isSubmitting.set(false);
+        this.errorMessage.set(
+          'No se pudo inicializar la pasarela de pagos Wompi. Por favor verifica tu conexión o desactiva bloqueadores de anuncios e intenta de nuevo.'
+        );
+        return;
+      }
+
+      try {
+        const checkout = new Widget({
           currency: 'COP',
-          amountInCents: totalInCents, // Factura con monto exacto en centavos (NO editable por el cliente)
-          reference: order.order_code, // Código único de la orden
+          amountInCents: totalInCents,
+          reference: reference,
           publicKey: environment.wompiPublicKey,
-          customerData: {
-            email: order.customer.email || undefined,
-            fullName: order.customer.full_name,
-            phoneNumber: order.customer.phone,
-          },
+          customerData: customerData,
         });
 
         checkout.open((result: any) => {
           const transaction = result?.transaction;
+          console.log('Resultado transacción Wompi:', transaction);
+
           if (transaction && transaction.status === 'APPROVED') {
-            // Pago exitoso aprobado por el banco -> Se confirma el pedido y se limpia el carrito
-            this.completedOrder.set({
-              ...order,
+            // PAGO APROBADO: Solo ahora creamos la orden en PostgreSQL y Admin
+            const approvedNotes = notes
+              ? `[Wompi Aprobado: ${transaction.id || reference}] ${notes}`
+              : `[Wompi Aprobado: ${transaction.id || reference}]`;
+
+            const orderToCreate: CreateOrderDto = {
+              ...baseDto,
+              order_code: reference,
               order_status: 'CONFIRMADO',
               payment_status: 'PAGADO',
+              delivery_notes: approvedNotes,
+            };
+
+            this.api.createOrder(orderToCreate).subscribe({
+              next: (res) => {
+                this.isSubmitting.set(false);
+                if (res.success && res.data) {
+                  this.completedOrder.set(res.data);
+                  this.cart.clear();
+                }
+              },
+              error: (err) => {
+                this.isSubmitting.set(false);
+                this.errorMessage.set(
+                  `Tu pago fue APROBADO por Wompi (ID: ${transaction.id || reference}), pero ocurrió un inconveniente registrando el pedido en la tienda. Contáctanos por WhatsApp con este comprobante para despacharlo de inmediato.`
+                );
+              },
             });
-            this.cart.clear();
-            this.isSubmitting.set(false);
           } else if (transaction && transaction.status === 'PENDING') {
-            // PSE en proceso de validación bancaria
-            this.completedOrder.set({
-              ...order,
+            // Transacción bancaria PSE en proceso de validación por el banco
+            const pendingNotes = notes
+              ? `[Wompi PSE Pendiente: ${transaction.id || reference}] ${notes}`
+              : `[Wompi PSE Pendiente: ${transaction.id || reference}]`;
+
+            const orderToCreate: CreateOrderDto = {
+              ...baseDto,
+              order_code: reference,
               order_status: 'PENDIENTE',
               payment_status: 'PENDIENTE',
+              delivery_notes: pendingNotes,
+            };
+
+            this.api.createOrder(orderToCreate).subscribe({
+              next: (res) => {
+                this.isSubmitting.set(false);
+                if (res.success && res.data) {
+                  this.completedOrder.set(res.data);
+                  this.cart.clear();
+                }
+              },
+              error: (err) => {
+                this.isSubmitting.set(false);
+                this.errorMessage.set(err.error?.error || 'Error al registrar pedido');
+              },
             });
-            this.cart.clear();
-            this.isSubmitting.set(false);
           } else {
-            // El cliente cerró la ventana o el banco rechazó -> EL PEDIDO NO SE CONFIRMA
-            this.errorMessage.set(
-              'El pago con PSE / Wompi no fue completado o fue cancelado. Tu pedido NO ha sido confirmado. Puedes intentar nuevamente o pagar con Nequi (320 618 2526) / Contraentrega.'
-            );
+            // El usuario cerró el modal, canceló o fue declinado:
+            // NO se envía NADA al backend ni a la base de datos
             this.isSubmitting.set(false);
+            if (transaction && transaction.status === 'DECLINED') {
+              this.errorMessage.set('La transacción fue rechazada por tu entidad bancaria. Puedes intentar nuevamente o pagar contraentrega.');
+            } else if (transaction && transaction.status === 'ERROR') {
+              this.errorMessage.set('Ocurrió un error en la pasarela de pagos. Por favor intenta nuevamente.');
+            } else {
+              this.errorMessage.set('El pago con PSE / Wompi no fue completado. No se ha generado ningún cobro ni pedido.');
+            }
           }
         });
-      } else {
-        // Fallback: el widget no pudo cargar — abrimos el link externo de Wompi
-        // El pedido queda en PENDIENTE hasta que el webhook o el admin verifiquen el pago
-        if (this.wompiPaymentLink) {
-          window.open(this.wompiPaymentLink, '_blank');
-        }
-        // Mostramos el pedido como PENDIENTE (no confirmado) para que el cliente sepa que debe pagar
-        this.completedOrder.set({
-          ...order,
-          order_status: 'PENDIENTE' as any,
-          payment_status: 'PENDIENTE' as any,
-        });
-        this.cart.clear();
+      } catch (err: any) {
+        console.error('Error abriendo Wompi:', err);
         this.isSubmitting.set(false);
+        this.errorMessage.set('Error iniciando el módulo de pago seguro. Por favor intenta de nuevo.');
       }
     };
 
-    if (!document.getElementById(scriptId)) {
-      const script = document.createElement('script');
-      script.id = scriptId;
-      script.src = 'https://checkout.wompi.co/widget.js';
-      script.type = 'text/javascript';
-      script.onload = openWidget;
-      script.onerror = () => {
-        this.errorMessage.set('No se pudo cargar la pasarela segura de Wompi. Por favor revisa tu conexión a internet.');
-        this.isSubmitting.set(false);
-      };
-      document.body.appendChild(script);
-    } else {
+    // @ts-ignore
+    if (typeof WidgetCheckout !== 'undefined' || typeof (window as any).WidgetCheckout !== 'undefined') {
       openWidget();
+    } else {
+      const scriptId = 'wompi-checkout-widget-script';
+      let script = document.getElementById(scriptId) as HTMLScriptElement;
+      if (!script) {
+        script = document.createElement('script');
+        script.id = scriptId;
+        script.src = 'https://checkout.wompi.co/widget.js';
+        script.type = 'text/javascript';
+        script.onload = openWidget;
+        script.onerror = () => {
+          this.errorMessage.set('No se pudo cargar la pasarela segura de Wompi. Por favor revisa tu conexión a internet.');
+          this.isSubmitting.set(false);
+        };
+        document.head.appendChild(script);
+      } else {
+        script.onload = openWidget;
+      }
     }
   }
 
@@ -880,7 +954,11 @@ export class CheckoutComponent implements OnInit {
     if (isNequi) {
       text = `¡Hola Homie! Acabo de realizar el pedido *${order.order_code}* por valor de $${order.total_amount}. Mi nombre es ${order.customer.full_name}. Adjunto aquí el comprobante de mi pago Nequi al 3206182526 para programar el despacho de mi paquete.`;
     } else if (isPse) {
-      text = `¡Hola Homie! Acabo de realizar el pedido *${order.order_code}* por valor de $${order.total_amount}. Mi nombre es ${order.customer.full_name}. Pagué a través del portal oficial PSE / Wompi. Deseo confirmar mi pedido para despacho.`;
+      if (order.payment_status === 'PAGADO') {
+        text = `¡Hola Homie! Acabo de pagar exitosamente mi pedido *${order.order_code}* por valor de $${order.total_amount} mediante PSE / Wompi. Mi nombre es ${order.customer.full_name}. Deseo confirmar mi pedido para despacho.`;
+      } else {
+        text = `¡Hola Homie! Acabo de registrar el pedido *${order.order_code}* por valor de $${order.total_amount}. Mi nombre es ${order.customer.full_name}. Realicé el pago por PSE / Wompi. Deseo confirmar mi pedido para despacho.`;
+      }
     } else {
       text = `¡Hola Homie! Acabo de realizar el pedido *${order.order_code}* por valor de $${order.total_amount}. Mi nombre es ${order.customer.full_name}. Dirección: ${order.customer.address}, ${order.customer.city} (${order.customer.department}). Deseo confirmar mi pedido para despacho con pago contraentrega.`;
     }
