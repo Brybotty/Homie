@@ -699,6 +699,8 @@ export class CheckoutComponent implements OnInit {
     return !!(this.wompiPaymentLink || (environment.wompiPublicKey && environment.wompiPublicKey.trim()));
   }
 
+  private readonly FORM_DRAFT_KEY = 'homie_checkout_form_draft';
+
   onDepartmentChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
     const deptName = target.value;
@@ -731,7 +733,35 @@ export class CheckoutComponent implements OnInit {
       payment_method: ['CONTRAENTREGA', Validators.required],
       delivery_notes: [''],
     });
-    this.selectedDepartment.set('Bogotá D.C.');
+
+    // 1. Restaurar datos del formulario previamente ingresados por el usuario si existen
+    try {
+      const savedDraft = localStorage.getItem(this.FORM_DRAFT_KEY);
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
+        if (draft.department) {
+          this.selectedDepartment.set(draft.department);
+        }
+        this.checkoutForm.patchValue(draft);
+      } else {
+        this.selectedDepartment.set('Bogotá D.C.');
+      }
+    } catch (e) {
+      this.selectedDepartment.set('Bogotá D.C.');
+    }
+
+    // 2. Guardar automáticamente cada cambio para que no se borren los datos al recargar la página
+    this.checkoutForm.valueChanges.subscribe((val) => {
+      try {
+        localStorage.setItem(this.FORM_DRAFT_KEY, JSON.stringify(val));
+      } catch (e) {}
+    });
+
+    // 3. Al cambiar el método de pago manualmente, desbloquear inmediatamente el botón
+    this.checkoutForm.get('payment_method')?.valueChanges.subscribe(() => {
+      this.isSubmitting.set(false);
+      this.errorMessage.set(null);
+    });
   }
 
   onSubmit(): void {
@@ -789,6 +819,9 @@ export class CheckoutComponent implements OnInit {
         if (res.success && res.data) {
           this.completedOrder.set(res.data);
           this.cart.clear();
+          try {
+            localStorage.removeItem(this.FORM_DRAFT_KEY);
+          } catch (e) {}
         }
         this.isSubmitting.set(false);
       },
@@ -832,6 +865,58 @@ export class CheckoutComponent implements OnInit {
         return;
       }
 
+      let checkCloseInterval: any = null;
+      let observer: MutationObserver | null = null;
+
+      const cleanupListeners = () => {
+        window.removeEventListener('message', messageHandler);
+        if (checkCloseInterval) {
+          clearInterval(checkCloseInterval);
+          checkCloseInterval = null;
+        }
+        if (observer) {
+          observer.disconnect();
+          observer = null;
+        }
+      };
+
+      // 1. Escuchar eventos postMessage emitidos por el iframe de Wompi al cancelar o volver
+      const messageHandler = (event: MessageEvent) => {
+        try {
+          if (event.origin && event.origin.includes('wompi.co')) {
+            const ev = event.data?.event;
+            if (['escpressed', 'merchantreturnclicked', 'merchantcontinueclicked', 'close', 'cancel'].includes(ev)) {
+              cleanupListeners();
+              this.isSubmitting.set(false);
+            }
+          }
+        } catch (e) {}
+      };
+
+      window.addEventListener('message', messageHandler);
+
+      // 2. Monitorear el DOM para detectar inmediatamente cuando el modal/backdrop de Wompi se cierra o se oculta
+      const checkIsClosed = () => {
+        const backdrop = document.querySelector('.waybox-backdrop');
+        if (backdrop) {
+          const isClosed =
+            backdrop.hasAttribute('hidden') ||
+            backdrop.classList.contains('waybox-backdrop-final-close') ||
+            backdrop.classList.contains('waybox-backdrop-hidden');
+          if (isClosed && this.isSubmitting()) {
+            cleanupListeners();
+            this.isSubmitting.set(false);
+          }
+        }
+      };
+
+      try {
+        observer = new MutationObserver(() => checkIsClosed());
+        observer.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['hidden', 'class'] });
+      } catch (e) {}
+
+      checkCloseInterval = setInterval(checkIsClosed, 300);
+
       try {
         const checkout = new Widget({
           currency: 'COP',
@@ -842,6 +927,7 @@ export class CheckoutComponent implements OnInit {
         });
 
         checkout.open((result: any) => {
+          cleanupListeners();
           const transaction = result?.transaction;
           console.log('Resultado transacción Wompi:', transaction);
 
@@ -865,6 +951,9 @@ export class CheckoutComponent implements OnInit {
                 if (res.success && res.data) {
                   this.completedOrder.set(res.data);
                   this.cart.clear();
+                  try {
+                    localStorage.removeItem(this.FORM_DRAFT_KEY);
+                  } catch (e) {}
                 }
               },
               error: (err) => {
@@ -894,6 +983,9 @@ export class CheckoutComponent implements OnInit {
                 if (res.success && res.data) {
                   this.completedOrder.set(res.data);
                   this.cart.clear();
+                  try {
+                    localStorage.removeItem(this.FORM_DRAFT_KEY);
+                  } catch (e) {}
                 }
               },
               error: (err) => {
@@ -910,11 +1002,12 @@ export class CheckoutComponent implements OnInit {
             } else if (transaction && transaction.status === 'ERROR') {
               this.errorMessage.set('Ocurrió un error en la pasarela de pagos. Por favor intenta nuevamente.');
             } else {
-              this.errorMessage.set('El pago con PSE / Wompi no fue completado. No se ha generado ningún cobro ni pedido.');
+              this.errorMessage.set('El pago con PSE / Wompi no fue completado. Puedes seleccionar otro método de pago.');
             }
           }
         });
       } catch (err: any) {
+        cleanupListeners();
         console.error('Error abriendo Wompi:', err);
         this.isSubmitting.set(false);
         this.errorMessage.set('Error iniciando el módulo de pago seguro. Por favor intenta de nuevo.');
